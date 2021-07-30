@@ -2,8 +2,9 @@
 //  Lark.js stand-alone parser template
 //
 
+"use strict";
+
 class _Decoratable {}
-class Str {}
 class ABC {}
 
 const NotImplemented = {};
@@ -42,7 +43,7 @@ const re = {
 };
 
 function _get_match(re_, regexp, s, flags) {
-  m = re_.compile(regexp, flags).exec(s);
+  const m = re_.compile(regexp, flags).exec(s);
   if (m != null) return m[0];
 }
 
@@ -94,7 +95,7 @@ class Scanner {
     }
   }
 }
-const util = require && require("util");
+const util = typeof require !== "undefined" && require("util");
 
 function dict_items(d) {
   return Object.entries(d);
@@ -286,10 +287,6 @@ function isupper(a) {
 function rsplit(s, delimiter, limit) {
   const arr = s.split(delimiter);
   return limit ? arr.splice(-limit - 1) : arr;
-}
-
-function rindex(s, substr) {
-  return s.lastIndexOf(substr);
 }
 
 function str_count(s, substr) {
@@ -1728,7 +1725,7 @@ Consume a token and calculate the new line & column.
       if (newlines) {
         this.line += newlines;
         this.line_start_pos =
-          this.char_pos + rindex(token, this.newline_char) + 1;
+          this.char_pos + token.lastIndexOf(this.newline_char) + 1;
       }
     }
 
@@ -4379,7 +4376,6 @@ class Indenter extends PostLex {
     super();
     this.paren_level = null;
     this.indent_level = null;
-    console.assert(this.tab_len > 0);
   }
 
   *handle_NL(token) {
