@@ -890,19 +890,17 @@ Depth-first iteration.
 
     let queue = [this];
     let subtrees = new Map();
-    for (const subtree of queue) {
-      subtrees[subtree] = subtree;
+    while (queue.length) {
+      let subtree = queue.pop()
+      subtrees.set(subtree, subtree);
       queue.push(
         ...subtree.children
-          .slice()
-          .reverse()
-          .filter((c) => c instanceof Tree && !(c in subtrees))
-          .map((c) => c)
+          .filter((c) => c instanceof Tree && !subtrees.has(c))
       );
     }
 
     queue = undefined;
-    return Array.from(dict_values(subtrees)).slice().reverse();
+    return [...subtrees.values()].reverse();
   }
 
   find_pred(pred) {
@@ -955,14 +953,14 @@ Breadth-first iteration.
 
     let node;
     let stack = [this];
-    while (stack) {
-      node = dict_pop(stack);
+    while (stack.length) {
+      node = stack.pop();
       if (!(node instanceof Tree)) {
         continue;
       }
 
       yield node;
-      for (const n of node.children.slice().reverse()) {
+      for (const n of [...node.children].reverse()) {
         stack.push(n);
       }
     }
@@ -1052,8 +1050,8 @@ Transformers visit each node of the tree, and run the appropriate method on it a
           return f(children);
         }
       } catch (e) {
-        if (e instanceof [GrammarError, Discard]) {
-          throw None;
+        if (e instanceof GrammarError || e instanceof Discard) {
+          throw e;
         } else if (e instanceof Error) {
           throw new VisitError(tree.data, tree, e);
         } else {
@@ -1072,7 +1070,7 @@ Transformers visit each node of the tree, and run the appropriate method on it a
       try {
         return f(token);
       } catch (e) {
-        if (e instanceof [GrammarError, Discard]) {
+        if (e instanceof GrammarError || e instanceof Discard) {
           throw None;
         } else if (e instanceof Error) {
           throw new VisitError(token.type, token, e);
@@ -1178,8 +1176,8 @@ Same as Transformer but non-recursive.
     // Tree to postfix
     let rev_postfix = [];
     let q = [tree];
-    while (q) {
-      t = dict_pop(q);
+    while (q.length) {
+      const t = q.pop();
       rev_postfix.push(t);
       if (t instanceof Tree) {
         q.push(...t.children);
@@ -1226,7 +1224,12 @@ Same as Transformer, recursive, but changes the tree in-place instead of returni
 
 class VisitorBase {
   _call_userfunc(tree) {
-    return ((this && this[tree.data]) || this.__default__)(tree);
+    const callback = this[tree.data]
+    if (callback) {
+      return callback(tree)
+    } else {
+      return this.__default__(tree);
+    }
   }
 
   __default__(tree) {
@@ -1334,12 +1337,10 @@ Interpreter walks the tree starting at the root.
 */
 
   visit(tree) {
-    let f = this && this[tree.data];
-    let wrapper = (f && f["visit_wrapper"]) || null;
-    if (wrapper !== null) {
-      return f.visit_wrapper(f, tree.data, tree.children, tree.meta);
+    if (tree.data in this) {
+      return this[tree.data](tree);
     } else {
-      return f(tree);
+      return this.__default__(tree)
     }
   }
 
