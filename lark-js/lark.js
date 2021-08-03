@@ -116,6 +116,9 @@ function dict_values(d) {
 }
 
 function dict_pop(d, key) {
+  if (key === undefined) {
+    key = Object.keys(d)[0];
+  }
   let value = d[key];
   delete d[key];
   return value;
@@ -300,6 +303,16 @@ function rsplit(s, delimiter, limit) {
 function str_count(s, substr) {
   let re = new RegExp(substr, "g");
   return (s.match(re) || []).length;
+}
+
+function list_count(list, elem) {
+  let count = 0;
+  for (const e of list) {
+    if (e === elem) {
+      count++;
+    }
+  }
+  return count;
 }
 
 function isSubset(subset, set) {
@@ -890,17 +903,18 @@ Depth-first iteration.
 
     let queue = [this];
     let subtrees = new Map();
-    while (queue.length) {
-      let subtree = queue.pop()
-      subtrees.set(subtree, subtree);
+    for (const subtree of queue) {
+      subtrees[subtree] = subtree;
       queue.push(
-        ...subtree.children
+        ...[...subtree.children]
+          .reverse()
           .filter((c) => c instanceof Tree && !subtrees.has(c))
+          .map((c) => c)
       );
     }
 
     queue = undefined;
-    return [...subtrees.values()].reverse();
+    return [...dict_values(subtrees)].reverse();
   }
 
   find_pred(pred) {
@@ -1071,7 +1085,7 @@ Transformers visit each node of the tree, and run the appropriate method on it a
         return f(token);
       } catch (e) {
         if (e instanceof GrammarError || e instanceof Discard) {
-          throw None;
+          throw e;
         } else if (e instanceof Error) {
           throw new VisitError(token.type, token, e);
         } else {
@@ -1104,7 +1118,7 @@ Transformers visit each node of the tree, and run the appropriate method on it a
   }
 
   _transform_tree(tree) {
-    let children = Array.from(this._transform_children(tree.children));
+    let children = [...this._transform_children(tree.children)];
     return this._call_userfunc(tree, children);
   }
 
@@ -1154,7 +1168,7 @@ Same as Transformer, but non-recursive, and changes the tree in-place instead of
 
   transform(tree) {
     for (const subtree of tree.iter_subtrees()) {
-      subtree.children = Array.from(this._transform_children(subtree.children));
+      subtree.children = [...this._transform_children(subtree.children)];
     }
 
     return this._transform_tree(tree);
@@ -1186,7 +1200,7 @@ Same as Transformer but non-recursive.
 
     // Postfix to tree
     let stack = [];
-    for (const x of rev_postfix.slice().reverse()) {
+    for (const x of [...rev_postfix].reverse()) {
       if (x instanceof Tree) {
         size = x.children.length;
         if (size) {
@@ -1215,7 +1229,7 @@ Same as Transformer, recursive, but changes the tree in-place instead of returni
 */
 
   _transform_tree(tree) {
-    tree.children = Array.from(this._transform_children(tree.children));
+    tree.children = [...this._transform_children(tree.children)];
     return this._call_userfunc(tree);
   }
 }
@@ -1903,7 +1917,7 @@ function sort_by_key_tuple(arr, key) {
 class TraditionalLexer extends Lexer {
   constructor(conf) {
     super();
-    let terminals = Array.from(conf.terminals);
+    let terminals = [...conf.terminals];
     console.assert(
       all(terminals.map((t) => t instanceof TerminalDef)),
       terminals
@@ -2113,7 +2127,7 @@ class ContextualLexer extends Lexer {
   constructor({ conf, states, always_accept = [] } = {}) {
     super();
     let accepts, key, lexer, lexer_conf;
-    let terminals = Array.from(conf.terminals);
+    let terminals = [...conf.terminals];
     let terminals_by_name = conf.terminals_by_name;
     let trad_conf = copy(conf);
     trad_conf.terminals = terminals;
@@ -2314,7 +2328,7 @@ class _PropagatePositions {
           (first_meta && first_meta["container_column"]) || first_meta.column;
       }
 
-      last_meta = this._pp_get_meta(children.slice().reverse());
+      last_meta = this._pp_get_meta([...children].reverse());
       if (last_meta !== null) {
         if (!("end_line" in res_meta)) {
           res_meta.end_line =
@@ -2483,7 +2497,8 @@ function maybe_create_child_filter(
   let empty_indices, s;
   // Prepare empty_indices as: How many Nones to insert at each index?
   if (_empty_indices.length) {
-    s = _empty_indices.map((b) => (0+b).toString()).join("");
+    console.assert(list_count(_empty_indices, false) === expansion.length);
+    s = _empty_indices.map((b) => (0 + b).toString()).join("");
     empty_indices = s.split("0").map((ones) => ones.length);
     console.assert(empty_indices.length === expansion.length + 1, [
       empty_indices,
@@ -2571,7 +2586,7 @@ Deal with the case where we're expanding children ('_rule') into a parent but th
     );
     return this.tree_class(
       "_ambig",
-      product(zip(...expand)).map((f) => this.node_builder(Array.from(f[0])))
+      product(zip(...expand)).map((f) => this.node_builder([...f[0]]))
     );
   }
 }
@@ -2736,7 +2751,7 @@ class ParseTreeBuilder {
     this.propagate_positions = propagate_positions;
     this.ambiguous = ambiguous;
     this.maybe_placeholders = maybe_placeholders;
-    this.rule_builders = Array.from(this._init_builders(rules));
+    this.rule_builders = [...this._init_builders(rules)];
   }
 
   *_init_builders(rules) {
@@ -2748,8 +2763,8 @@ class ParseTreeBuilder {
       options = rule.options;
       keep_all_tokens = options.keep_all_tokens;
       expand_single_child = options.expand1;
-      wrapper_chain = Array.from(
-        filter(null, [
+      wrapper_chain = [
+        ...filter(null, [
           expand_single_child && !rule.alias && ExpandSingleChild,
           maybe_create_child_filter(
             rule.expansion,
@@ -2766,8 +2781,8 @@ class ParseTreeBuilder {
             ),
           this.ambiguous &&
             partial(AmbiguousIntermediateExpander, this.tree_class),
-        ])
-      );
+        ]),
+      ];
       yield [rule, wrapper_chain];
     }
   }
@@ -2849,7 +2864,7 @@ class LALR_Parser extends Serialize {
     } catch (e) {
       if (e instanceof UnexpectedInput) {
         if (on_error === null) {
-          throw None;
+          throw e;
         }
 
         while (true) {
@@ -3339,7 +3354,7 @@ class IntParseTable extends ParseTable {
   static from_ParseTable(parse_table) {
     const cls = this;
     let la;
-    let enum_ = Array.from(parse_table.states);
+    let enum_ = [...parse_table.states];
     let state_to_idx = Object.fromEntries(
       enumerate(enum_).map(([i, s]) => [s, i])
     );
@@ -3586,7 +3601,7 @@ function create_contextual_lexer(lexer_conf, parser, postlex) {
   let states = Object.fromEntries(
     dict_items(parser._parse_table.states).map(([idx, t]) => [
       idx,
-      Array.from(dict_keys(t)),
+      [...dict_keys(t)],
     ])
   );
   let always_accept = postlex ? postlex.always_accept : [];
@@ -4442,7 +4457,7 @@ class Indenter extends PostLex {
     }
 
     while (this.indent_level.length > 1) {
-      dict_pop(this.indent_level);
+      this.indent_level.pop();
       yield new Token(this.DEDENT_type, "");
     }
 
