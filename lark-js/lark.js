@@ -43,8 +43,8 @@ const re = {
 };
 
 function _get_match(re_, regexp, s, flags) {
-  const m = re_.compile(regexp, flags).exec(s);
-  if (m != null) return m[0];
+  const match = re_.compile(regexp, flags).exec(s);
+  if (match != null) return match[0];
 }
 
 class Scanner {
