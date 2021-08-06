@@ -6,7 +6,7 @@
 //
 //      node run_json_parser.js
 
-var lark = require('./json_parser.js')
+var lark = require('./json_parser.js');
 
 var transformer = {
     number: ([n])  => parseFloat(n.value),
@@ -18,9 +18,9 @@ var transformer = {
     null: () => null,
     true: () => true,
     false: () => false,
-}
+};
 
-var parser = lark.load_parser({transformer})
+var parser = lark.load_parser({transformer});
 
 
 function test_json() {
@@ -33,14 +33,14 @@ function test_json() {
         "strings"      : [ "This", [ "And" , "That", "And a \\"b" ] ],
         "nothing"      : null
     }
-    `
+    `;
 
-    console.log( parser.parse(text) )
+    console.log( parser.parse(text) );
 
 }
 
 
 if (require && require.main === module) {
-    test_json()
+    test_json();
 }
 
