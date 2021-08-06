@@ -13,14 +13,14 @@
 //   - tree_class: explanation
 //   - debug: explanation
 function load_parser(options = {}) {
-  if (
-    options.transformer &&
-    options.transformer.constructor.name === "object"
-  ) {
-    options.transformer = Transformer.fromObj(options.transformer);
-  }
+    if (
+        options.transformer &&
+        options.transformer.constructor.name === "object"
+    ) {
+        options.transformer = Transformer.fromObj(options.transformer);
+    }
 
-  return Lark._load_from_dict({ data: DATA, memo: MEMO, ...options });
+    return Lark._load_from_dict({ data: DATA, memo: MEMO, ...options });
 }
 
 const NO_VALUE = {};
