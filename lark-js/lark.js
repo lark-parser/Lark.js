@@ -1,3 +1,5 @@
+var { map, find, findKey, extend } = require('underscore');
+
 //
 //  Lark.js stand-alone parser
 //===============================
@@ -49,13 +51,8 @@ function _get_match(re_, regexp, s, flags) {
 
 class Scanner {
   constructor(terminals, g_regex_flags, re_, use_bytes, match_whole = false) {
-    this.terminals = terminals;
-    this.g_regex_flags = g_regex_flags;
-    this.re_ = re_;
-    this.use_bytes = use_bytes;
-    this.match_whole = match_whole;
-    this.allowed_types = new Set(this.terminals.map((t) => t.name));
-
+    extend(this, {terminals, g_regex_flags, re_, use_bytes, match_whole});
+    this.allowed_types = new Set(map(this.terminals, 'name'));
     this._regexps = this._build_mres(terminals);
   }
 
@@ -66,33 +63,25 @@ class Scanner {
       t.pattern.flags.join("")
     );
 
-    let regexps = [];
-    for (let [flags, patterns] of patterns_by_flags) {
-      const pattern = patterns
-        .map((t) => `(?<${t.name}>${t.pattern.to_regexp() + postfix})`)
-        .join("|");
-      regexps.push(new RegExp(pattern, this.g_regex_flags + flags + "y"));
-    }
-
-    return regexps;
+    return map(patterns_by_flags, ([flags, patterns]) => {
+      const pattern = map(
+        patterns, (t) => `(?<${t.name}>${t.pattern.to_regexp() + postfix})`
+      ).join("|");
+      return new RegExp(pattern, this.g_regex_flags + flags + "y");
+    });
   }
 
   match(text, pos) {
-    for (const re of this._regexps) {
+    let result;
+    find(this._regexps, (re) => {
       re.lastIndex = pos;
       let m = re.exec(text);
       if (m) {
-        // Find group. Ugly hack, but javascript is forcing my hand.
-        let group = null;
-        for (let [k, v] of Object.entries(m.groups)) {
-          if (v) {
-            group = k;
-            break;
-          }
-        }
-        return [m[0], group];
+        let group = findKey(m.groups) || null;
+        return result = [m[0], group];
       }
-    }
+    });
+    return result;
   }
 } //
 //  Start of library code
