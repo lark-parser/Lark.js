@@ -27,8 +27,8 @@ const NO_VALUE = {};
 class _Decoratable {}
 
 //
-//   Implementation of Scanner + Regular expression polyfill
-// ----------------------------------------------------------
+//   Implementation of Scanner + Python stdlib re module emulation
+// ---------------------------------------------------------------
 
 const re = {
   escape(string) {
