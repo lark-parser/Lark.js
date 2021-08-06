@@ -22,7 +22,6 @@ var transformer = {
 
 var parser = lark.load_parser({transformer});
 
-
 function test_json() {
     var text = `
     {
@@ -34,11 +33,8 @@ function test_json() {
         "nothing"      : null
     }
     `;
-
     console.log( parser.parse(text) );
-
 }
-
 
 if (require && require.main === module) {
     test_json();
