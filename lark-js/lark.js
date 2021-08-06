@@ -83,7 +83,9 @@ class Scanner {
     });
     return result;
   }
-} //
+}
+
+//
 //  Start of library code
 // --------------------------
 
@@ -365,7 +367,7 @@ class LexError extends LarkError {
 
 class UnexpectedInput extends LarkError {
   /*
-UnexpectedInput Error.
+    UnexpectedInput Error.
 
     Used as a base class for the following exceptions:
 
@@ -374,7 +376,7 @@ UnexpectedInput Error.
 
     After catching one of these exceptions, you may call the following helper methods to create a nicer error message.
 
-*/
+  */
 
   static get pos_in_stream() {
     return null;
