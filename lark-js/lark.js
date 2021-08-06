@@ -4,16 +4,15 @@
 
 "use strict";
 
+// Main interface, returns a parser object that implements the grammar for
+// which this module was generated. The parser object has a .parse method that
+// accepts a string as its first argument and returns the parse tree.
+// Allowed options:
+//   - transformer: explanation
+//   - propagate_positions: explanation
+//   - tree_class: explanation
+//   - debug: explanation
 function load_parser(options = {}) {
-  `
-  Allowed options:
-    - transformer
-    - propagate_positions
-    - tree_class
-    - debug (untested)
-
-    To test: postlex, lexer_callbacks, g_regex_flags
-  `;
   if (
     options.transformer &&
     options.transformer.constructor.name === "object"
