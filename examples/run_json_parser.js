@@ -9,11 +9,11 @@
 lark = require('./json_parser.js')
 
 let transformer = {
-    array:  (items) => items,
-    pair:   (items) => items,
     number: ([n])  => parseFloat(n.value),
     string: ([s])  => s.value.slice(1, -1),
-    object: (entries) => Object.fromEntries(entries),
+    array:  Array.from,
+    pair:   Array.from,
+    object: Object.fromEntries,
 
     null: () => null,
     true: () => true,
