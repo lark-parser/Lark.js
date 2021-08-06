@@ -323,19 +323,21 @@ function isSubset(subset, set) {
   return true;
 }
 
-function* segment_by_key(a, key) {
+function segment_by_key(a, key) {
+  const result = [];
   let buffer = [];
   let last_k = null;
-  for (const item of a) {
+  for (let i = 0, l = a.length, item = a[i]; i < l; item = a[++i]) {
     const k = key(item);
     if (last_k && k != last_k) {
-      yield [last_k, buffer];
+      result.push([last_k, buffer]);
       buffer = [];
     }
     buffer.push(item);
     last_k = k;
   }
-  yield [last_k, buffer];
+  result.push([last_k, buffer]);
+  return result;
 }
 
 // --------------------------
