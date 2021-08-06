@@ -6,9 +6,9 @@
 //
 //      node run_json_parser.js
 
-lark = require('./json_parser.js')
+var lark = require('./json_parser.js')
 
-let transformer = {
+var transformer = {
     number: ([n])  => parseFloat(n.value),
     string: ([s])  => s.value.slice(1, -1),
     array:  Array.from,
@@ -24,7 +24,7 @@ var parser = lark.load_parser({transformer})
 
 
 function test_json() {
-    text = `
+    var text = `
     {
         "empty_object" : {},
         "empty_array"  : [],
