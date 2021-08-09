@@ -60,7 +60,7 @@ def build_lalr(namespace):
 
 
 def main():
-    parser = ArgumentParser(prog="prog='python -m lark-js'", description="Lark Stand-alone Generator Tool",
+    parser = ArgumentParser(prog="lark-js", description="Lark Stand-alone Generator Tool",
                             parents=[lalr_argparser], epilog='Look at the Lark documentation for more info on the options')
     # parser.add_argument('-c', '--compress', action='store_true', default=0, help="Enable compression")
     if len(sys.argv)==1:

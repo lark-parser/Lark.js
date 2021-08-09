@@ -4,7 +4,7 @@
 //
 // First, we must generate a Python parser using:
 //
-//      python -m lark-js python3.lark -s file_input -o python_parser.js
+//      lark-js python3.lark -s file_input -o python_parser.js
 //
 //  (The grammar file can be found in the Lark repo:
 //   https://github.com/lark-parser/lark/blob/master/examples/advanced/python3.lark)

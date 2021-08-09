@@ -24,13 +24,13 @@ Currently, only LALR(1) is supported. (Earley support is planned!)
 ### Generate a Javascript LALR(1) parser
 
 ```bash
-	python -m lark-js my_grammar.lark -o my_parser.js
+	lark-js my_grammar.lark -o my_parser.js
 ```
 
 For help, run:
 
 ```bash
-	python -m lark-js --help
+	lark-js --help
 ```
 
 ### Syntax Highlighting

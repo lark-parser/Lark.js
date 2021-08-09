@@ -1,6 +1,6 @@
 // First, we must generate a JSON parser using:
 //
-//      python -m lark-js json.lark -o json_parser.js
+//      lark-js json.lark -o json_parser.js
 //
 // Then we can run it with
 //
