@@ -1,25 +1,25 @@
-# Lark.js - a port of the Lark parsing toolkit to Javascript
+# Lark.js - generate parsers in Javascript
+
+This is a port of the Lark standalone parser to Javascript.
 
 Lark is a parsing toolkit for Python, built with a focus on ergonomics, performance and modularity.
 
-With Lark.js, you create a fast Javascript parser from a grammar written for Lark.
+With Lark.js, you create a Javascript parser from a grammar written for Lark.
 
-The compiled Javascript modules include Lark's base classes and utilities, such as `Tree`, `Transformer`, and `InteractiveParser`.
+The compiled Javascript module will include Lark's base classes and utilities, 
+such as `Tree`, `Transformer`, `Visitor` and `InteractiveParser`.
 
 Currently, only LALR(1) is supported. (Earley support is planned!)
 
 ### Quick links
 
 - [Lark (Python)](https://https://github.com/lark-parser/lark)
-- [Cheatsheet (PDF)](/docs/_static/lark_cheatsheet.pdf)
 - [Online IDE](https://lark-parser.github.io/ide)
 - [Gitter chat](https://gitter.im/lark-parser/Lobby)
 
 ### Install Lark.js
 
     $ pip install lark-js --upgrade
-
-[![Build Status](https://travis-ci.org/lark-parser/lark.svg?branch=master)](https://travis-ci.org/lark-parser/lark)
 
 ### Generate a Javascript LALR(1) parser
 
