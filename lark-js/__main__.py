@@ -25,10 +25,10 @@ __dir__ = Path(__file__).parent
 flags = [
     ('d', 'debug'),
     'keep_all_tokens',
-    'regex',
+    # 'regex',
     'propagate_positions',
     'maybe_placeholders',
-    'use_bytes'
+    # 'use_bytes'
 ]
 
 options = ['start', 'lexer']
