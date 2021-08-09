@@ -23,16 +23,14 @@ class PythonIndenter extends lark.Indenter {
 const parser = lark.load_parser({postlex: new PythonIndenter()})
 
 
-function test_python_lib() {
-    const BASE_DIR = 'C:/Python38/lib/'
-
+function test_python_lib(base_dir) {
     const fs = require('fs');
-    const files = fs.readdirSync(BASE_DIR);
+    const files = fs.readdirSync(base_dir);
 
     for (const fn of files) {
         if (fn.endsWith('.py')) {
 
-            fs.readFile( BASE_DIR + fn, function (err, data) {
+            fs.readFile(base_dir + fn, function (err, data) {
               if (err) {
                 throw err;
               }
@@ -49,6 +47,6 @@ function test_python_lib() {
 
 
 if (require && require.main === module) {
-    test_python_lib()
+    test_python_lib('/Python38/lib/')   /* <-- Edit this */
 }
 

@@ -51,6 +51,7 @@ Lark provides syntax highlighting for its grammar files (\*.lark):
     - Fast and light, competitive with PLY
     - Can generate a stand-alone parser ([read more](docs/tools.md#stand-alone-parser))
  - **EBNF** grammar
+ - Usable in the browser and in Node
  - Automatic line & column tracking
  - Standard library of terminals (strings, numbers, names, etc.)
  - Import grammars from Nearley.js ([read more](/docs/tools.md#importing-grammars-from-nearleyjs))
@@ -64,7 +65,8 @@ Lark.js uses the [MIT license](LICENSE).
 
 Lark.js is accepting pull-requests. If you would like to help, open an issue or find us on gitter.
 
-## Sponsor
+## Sponsoring
+
+Lark.js was made possible with the help of a generous donation by [Smore](https://www.smore.com/) ❤️
 
 If you like Lark, and want to see it grow, please consider [sponsoring us!](https://github.com/sponsors/lark-parser)
-
