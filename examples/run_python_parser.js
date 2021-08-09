@@ -1,10 +1,18 @@
+// 
+//   Example Python Parser for Javascript
+// ----------------------------------------
+//
 // First, we must generate a Python parser using:
 //
-//      python -m lark-js \lark\examples\advanced\python3.lark -s file_input -o python_parser.js
+//      python -m lark-js python3.lark -s file_input -o python_parser.js
+//
+//  (The grammar file can be found in the Lark repo:
+//   https://github.com/lark-parser/lark/blob/master/examples/advanced/python3.lark)
 //
 // Then we can run it with
 //
 //      node run_python_parser.js
+//
 
 var {get_parser, Indenter} = require('./python_parser.js')
 
