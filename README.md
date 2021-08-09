@@ -55,6 +55,14 @@ Lark provides syntax highlighting for its grammar files (\*.lark):
  - Import grammars from Nearley.js ([read more](/docs/tools.md#importing-grammars-from-nearleyjs))
  - And much more!
 
+### Sync with the Python code
+
+Ports from one language to another are often at risk of falling out of sync as time goes on.
+
+But Lark.js wasn't just written by hand -- it was transpiled directly from Lark's Python code!
+
+That means that futures updates to Lark-Python will be automatically added to Lark.js too. 
+
 ## License
 
 Lark.js uses the [MIT license](LICENSE).
