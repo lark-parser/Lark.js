@@ -6,9 +6,9 @@
 //
 //      node run_python_parser.js
 
-lark = require('./python_parser.js')
+var {get_parser, Indenter} = require('./python_parser.js')
 
-class PythonIndenter extends lark.Indenter {
+class PythonIndenter extends Indenter {
     constructor() {
         super()
         this.NL_type = '_NEWLINE'
@@ -20,29 +20,24 @@ class PythonIndenter extends lark.Indenter {
     }
 }
 
-const parser = lark.load_parser({postlex: new PythonIndenter()})
+const parser = get_parser({postlex: new PythonIndenter()})
 
 
 function test_python_lib(base_dir) {
     const fs = require('fs');
     const files = fs.readdirSync(base_dir);
 
+    console.time('python_lib')
     for (const fn of files) {
         if (fn.endsWith('.py')) {
+            const data = fs.readFileSync(base_dir + fn)
+            const text = data.toString();
 
-            fs.readFile(base_dir + fn, function (err, data) {
-              if (err) {
-                throw err;
-              }
-              const text = data.toString();
-
-                console.log(fn, text.length)
-                let tree = parser.parse(text+'\n', 'file_input')
-
-            });
-
+            console.log(fn, text.length)
+            let tree = parser.parse(text+'\n', 'file_input')
         }
     }
+    console.timeEnd('python_lib')
 }
 
 

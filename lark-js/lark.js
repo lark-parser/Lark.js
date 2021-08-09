@@ -4,16 +4,23 @@
 
 "use strict";
 
-function load_parser(options = {}) {
-  `
-  Allowed options:
-    - transformer
-    - propagate_positions
-    - tree_class
-    - debug (untested)
+/*
+	This is the main entrypoint into the generated Lark parser.
 
-    To test: postlex, lexer_callbacks, g_regex_flags
-  `;
+	Parameters:
+		options (bool). An object with the following optional properties: 
+		  - transformer: an object of {rule: callback}, or an instance of Transformer
+		  - propagate_positions (bool): should all tree nodes calculate line/column info?
+		  - tree_class (Tree): a class that extends Tree, to be used for creating the parse tree.
+		  - debug (bool): in case of error, should the parser output debug info to the console?
+
+	Returns:
+	 instance of Lark, which provides the following methods:
+	   - parse
+	   - parse_interactive
+	   - lex
+*/
+function get_parser(options = {}) {
   if (
     options.transformer &&
     options.transformer.constructor.name === "object"
@@ -26,10 +33,9 @@ function load_parser(options = {}) {
 
 const NO_VALUE = {};
 class _Decoratable {}
-
 //
-//   Implementation of Scanner + Regular expression polyfill
-// ----------------------------------------------------------
+//   Implementation of Scanner + module emulation for Python's stdlib re
+// -------------------------------------------------------------------------
 
 const re = {
   escape(string) {
@@ -95,7 +101,8 @@ class Scanner {
       }
     }
   }
-} //
+}
+//
 //  Start of library code
 // --------------------------
 
@@ -373,9 +380,8 @@ class LexError extends LarkError {
   // pass
 }
 
-class UnexpectedInput extends LarkError {
-  /*
-UnexpectedInput Error.
+/*
+  UnexpectedInput Error.
 
     Used as a base class for the following exceptions:
 
@@ -386,6 +392,7 @@ UnexpectedInput Error.
     
 */
 
+class UnexpectedInput extends LarkError {
   static get pos_in_stream() {
     return null;
   }
@@ -398,19 +405,17 @@ UnexpectedInput Error.
   get _terminals_by_name() {
     return this.constructor._terminals_by_name;
   }
-  get_context(text, span = 40) {
-    /*
-Returns a pretty string pinpointing the error in the text,
+  /*
+    Returns a pretty string pinpointing the error in the text,
         with span amount of context characters around it.
 
         Note:
             The parser doesn't hold a copy of the text it has to parse,
             so you have to provide it again
         
-*/
-
+  */
+  get_context(text, span = 40) {
     let after, before;
-    console.assert(this.pos_in_stream !== null, this);
     let pos = this.pos_in_stream;
     let start = max(pos - span, 0);
     let end = pos + span;
@@ -431,14 +436,8 @@ Returns a pretty string pinpointing the error in the text,
     }
   }
 
-  match_examples(
-    parse_fn,
-    examples,
-    token_type_match_fallback = false,
-    use_accepts = false
-  ) {
-    /*
-Allows you to detect what's wrong in the input text by matching
+  /*
+    Allows you to detect what's wrong in the input text by matching
         against example errors.
 
         Given a parser instance and a dictionary mapping some label with
@@ -455,16 +454,19 @@ Allows you to detect what's wrong in the input text by matching
             use_accepts: Recommended to call this with ``use_accepts=True``.
                 The default is ``False`` for backwards compatibility.
         
-*/
-
-    console.assert(this.state !== null, "Not supported for this exception");
+  */
+  match_examples(
+    parse_fn,
+    examples,
+    token_type_match_fallback = false,
+    use_accepts = false
+  ) {
     if (is_dict(examples)) {
       examples = dict_items(examples);
     }
 
     let candidate = [null, false];
     for (const [i, [label, example]] of enumerate(examples)) {
-      console.assert(!(typeof example === "string"), "Expecting a list");
       for (const [j, malformed] of enumerate(example)) {
         try {
           parse_fn(malformed);
@@ -595,9 +597,8 @@ class UnexpectedCharacters extends LexError {
   }
 }
 
-class UnexpectedToken extends ParseError {
-  /*
-An exception that is raised by the parser, when the token it received
+/*
+  An exception that is raised by the parser, when the token it received
     doesn't match any valid step forward.
 
     The parser provides an interactive instance through `interactive_parser`,
@@ -607,6 +608,7 @@ An exception that is raised by the parser, when the token it received
     
 */
 
+class UnexpectedToken extends ParseError {
   constructor({
     token,
     expected,
@@ -642,9 +644,8 @@ An exception that is raised by the parser, when the token it received
   }
 }
 
-class VisitError extends LarkError {
-  /*
-VisitError is raised when visitors are interrupted by an exception
+/*
+  VisitError is raised when visitors are interrupted by an exception
 
     It provides the following attributes for inspection:
     - obj: the tree node or token it was processing when the exception was raised
@@ -652,6 +653,7 @@ VisitError is raised when visitors are interrupted by an exception
     
 */
 
+class VisitError extends LarkError {
   constructor(rule, obj, orig_exc) {
     let message = format(
       'Error trying to process rule "%s":\n\n%s',
@@ -708,9 +710,8 @@ function _deserialize(data, namespace, memo) {
   return data;
 }
 
-class Serialize {
-  /*
-Safe-ish serialization interface that doesn't rely on Pickle
+/*
+  Safe-ish serialization interface that doesn't rely on Pickle
 
     Attributes:
         __serialize_fields__ (List[str]): Fields (aka attributes) to serialize.
@@ -719,6 +720,7 @@ Safe-ish serialization interface that doesn't rely on Pickle
     
 */
 
+class Serialize {
   memo_serialize(types_to_memoize) {
     let memo = new SerializeMemoizer(types_to_memoize);
     return [this.serialize(memo), memo.serialize()];
@@ -767,11 +769,11 @@ Safe-ish serialization interface that doesn't rely on Pickle
   }
 }
 
-class SerializeMemoizer extends Serialize {
-  /*
-A version of serialize that memoizes objects to reduce space
+/*
+  A version of serialize that memoizes objects to reduce space
 */
 
+class SerializeMemoizer extends Serialize {
   static get __serialize_fields__() {
     return ["memoized"];
   }
@@ -805,9 +807,8 @@ class Meta {
   }
 }
 
-class Tree {
-  /*
-The main tree class.
+/*
+  The main tree class.
 
     Creates a new tree, and stores "data" and "children" in attributes of the same name.
     Trees can be hashed and compared.
@@ -820,6 +821,7 @@ The main tree class.
     
 */
 
+class Tree {
   constructor(data, children, meta = null) {
     this.data = data;
     this.children = children;
@@ -865,14 +867,13 @@ The main tree class.
     return l;
   }
 
-  pretty(indent_str = "  ") {
-    /*
-Returns an indented string representation of the tree.
+  /*
+    Returns an indented string representation of the tree.
 
         Great for debugging.
         
-*/
-
+  */
+  pretty(indent_str = "  ") {
     return this._pretty(0, indent_str).join("");
   }
 
@@ -893,14 +894,13 @@ Returns an indented string representation of the tree.
     }
   }
 
-  iter_subtrees() {
-    /*
-Depth-first iteration.
+  /*
+    Depth-first iteration.
 
         Iterates over all the subtrees, never returning to the same node twice (Lark's parse-tree is actually a DAG).
         
-*/
-
+  */
+  iter_subtrees() {
     let queue = [this];
     let subtrees = new Map();
     for (const subtree of queue) {
@@ -917,33 +917,30 @@ Depth-first iteration.
     return [...dict_values(subtrees)].reverse();
   }
 
+  /*
+    Returns all nodes of the tree that evaluate pred(node) as true.
+  */
   find_pred(pred) {
-    /*
-Returns all nodes of the tree that evaluate pred(node) as true.
-*/
-
     return filter(pred, this.iter_subtrees());
   }
 
+  /*
+    Returns all nodes of the tree whose data equals the given data.
+  */
   find_data(data) {
-    /*
-Returns all nodes of the tree whose data equals the given data.
-*/
-
     return this.find_pred((t) => t.data === data);
   }
 
-  *scan_values(pred) {
-    /*
-Return all values in the tree that evaluate pred(value) as true.
+  /*
+    Return all values in the tree that evaluate pred(value) as true.
 
         This can be used to find all the tokens in the tree.
 
         Example:
             >>> all_tokens = tree.scan_values(lambda v: isinstance(v, Token))
         
-*/
-
+  */
+  *scan_values(pred) {
     for (const c of this.children) {
       if (c instanceof Tree) {
         for (const t of c.scan_values(pred)) {
@@ -957,14 +954,13 @@ Return all values in the tree that evaluate pred(value) as true.
     }
   }
 
-  *iter_subtrees_topdown() {
-    /*
-Breadth-first iteration.
+  /*
+    Breadth-first iteration.
 
         Iterates over all the subtrees, return nodes in order like pretty() does.
         
-*/
-
+  */
+  *iter_subtrees_topdown() {
     let node;
     let stack = [this];
     while (stack.length) {
@@ -994,18 +990,18 @@ Breadth-first iteration.
 // Visitors
 //
 
-class Discard extends Error {
-  /*
-When raising the Discard exception in a transformer callback,
+/*
+  When raising the Discard exception in a transformer callback,
     that node is discarded and won't appear in the parent.
     
 */
+
+class Discard extends Error {
   // pass
 }
 
-class Transformer extends _Decoratable {
-  /*
-Transformers visit each node of the tree, and run the appropriate method on it according to the node's data.
+/*
+  Transformers visit each node of the tree, and run the appropriate method on it according to the node's data.
 
     Methods are provided by the user via inheritance, and called according to ``tree.data``.
     The returned value from each method replaces the node in the tree structure.
@@ -1032,6 +1028,7 @@ Transformers visit each node of the tree, and run the appropriate method on it a
     
 */
 
+class Transformer extends _Decoratable {
   static get __visit_tokens__() {
     return true;
   }
@@ -1122,45 +1119,42 @@ Transformers visit each node of the tree, and run the appropriate method on it a
     return this._call_userfunc(tree, children);
   }
 
+  /*
+    Transform the given tree, and return the final result
+  */
   transform(tree) {
-    /*
-Transform the given tree, and return the final result
-*/
-
     return this._transform_tree(tree);
   }
 
-  __default__(data, children, meta) {
-    /*
-Default function that is called if there is no attribute matching ``data``
+  /*
+    Default function that is called if there is no attribute matching ``data``
 
         Can be overridden. Defaults to creating a new copy of the tree node (i.e. ``return Tree(data, children, meta)``)
         
-*/
-
+  */
+  __default__(data, children, meta) {
     return new Tree(data, children, meta);
   }
 
-  __default_token__(token) {
-    /*
-Default function that is called if there is no attribute matching ``token.type``
+  /*
+    Default function that is called if there is no attribute matching ``token.type``
 
         Can be overridden. Defaults to returning the token as-is.
         
-*/
-
+  */
+  __default_token__(token) {
     return token;
   }
 }
 
-class Transformer_InPlace extends Transformer {
-  /*
-Same as Transformer, but non-recursive, and changes the tree in-place instead of returning new instances
+/*
+  Same as Transformer, but non-recursive, and changes the tree in-place instead of returning new instances
 
     Useful for huge trees. Conservative in memory.
     
 */
 
+class Transformer_InPlace extends Transformer {
   _transform_tree(tree) {
     // Cancel recursion
     return this._call_userfunc(tree);
@@ -1175,9 +1169,8 @@ Same as Transformer, but non-recursive, and changes the tree in-place instead of
   }
 }
 
-class Transformer_NonRecursive extends Transformer {
-  /*
-Same as Transformer but non-recursive.
+/*
+  Same as Transformer but non-recursive.
 
     Like Transformer, it doesn't change the original tree.
 
@@ -1185,6 +1178,7 @@ Same as Transformer but non-recursive.
     
 */
 
+class Transformer_NonRecursive extends Transformer {
   transform(tree) {
     let args, size;
     // Tree to postfix
@@ -1223,11 +1217,11 @@ Same as Transformer but non-recursive.
   }
 }
 
-class Transformer_InPlaceRecursive extends Transformer {
-  /*
-Same as Transformer, recursive, but changes the tree in-place instead of returning new instances
+/*
+  Same as Transformer, recursive, but changes the tree in-place instead of returning new instances
 */
 
+class Transformer_InPlaceRecursive extends Transformer {
   _transform_tree(tree) {
     tree.children = [...this._transform_children(tree.children)];
     return this._call_userfunc(tree);
@@ -1246,14 +1240,13 @@ class VisitorBase {
     }
   }
 
-  __default__(tree) {
-    /*
-Default function that is called if there is no attribute matching ``tree.data``
+  /*
+    Default function that is called if there is no attribute matching ``tree.data``
 
         Can be overridden. Defaults to doing nothing.
         
-*/
-
+  */
+  __default__(tree) {
     return tree;
   }
 
@@ -1262,19 +1255,18 @@ Default function that is called if there is no attribute matching ``tree.data``
   }
 }
 
-class Visitor extends VisitorBase {
-  /*
-Tree visitor, non-recursive (can handle huge trees).
+/*
+  Tree visitor, non-recursive (can handle huge trees).
 
     Visiting a node calls its methods (provided by the user via inheritance) according to ``tree.data``
     
 */
 
+class Visitor extends VisitorBase {
+  /*
+    Visits the tree, starting with the leaves and finally the root (bottom-up)
+  */
   visit(tree) {
-    /*
-Visits the tree, starting with the leaves and finally the root (bottom-up)
-*/
-
     for (const subtree of tree.iter_subtrees()) {
       this._call_userfunc(subtree);
     }
@@ -1282,11 +1274,10 @@ Visits the tree, starting with the leaves and finally the root (bottom-up)
     return tree;
   }
 
+  /*
+    Visit the tree, starting at the root, and ending at the leaves (top-down)
+  */
   visit_topdown(tree) {
-    /*
-Visit the tree, starting at the root, and ending at the leaves (top-down)
-*/
-
     for (const subtree of tree.iter_subtrees_topdown()) {
       this._call_userfunc(subtree);
     }
@@ -1295,9 +1286,8 @@ Visit the tree, starting at the root, and ending at the leaves (top-down)
   }
 }
 
-class Visitor_Recursive extends VisitorBase {
-  /*
-Bottom-up visitor, recursive.
+/*
+  Bottom-up visitor, recursive.
 
     Visiting a node calls its methods (provided by the user via inheritance) according to ``tree.data``
 
@@ -1305,11 +1295,11 @@ Bottom-up visitor, recursive.
     
 */
 
+class Visitor_Recursive extends VisitorBase {
+  /*
+    Visits the tree, starting with the leaves and finally the root (bottom-up)
+  */
   visit(tree) {
-    /*
-Visits the tree, starting with the leaves and finally the root (bottom-up)
-*/
-
     for (const child of tree.children) {
       if (child instanceof Tree) {
         this.visit(child);
@@ -1320,11 +1310,10 @@ Visits the tree, starting with the leaves and finally the root (bottom-up)
     return tree;
   }
 
+  /*
+    Visit the tree, starting at the root, and ending at the leaves (top-down)
+  */
   visit_topdown(tree) {
-    /*
-Visit the tree, starting at the root, and ending at the leaves (top-down)
-*/
-
     this._call_userfunc(tree);
     for (const child of tree.children) {
       if (child instanceof Tree) {
@@ -1336,9 +1325,8 @@ Visit the tree, starting at the root, and ending at the leaves (top-down)
   }
 }
 
-class Interpreter extends _Decoratable {
-  /*
-Interpreter walks the tree starting at the root.
+/*
+  Interpreter walks the tree starting at the root.
 
     Visits the tree, starting with the root and finally the leaves (top-down)
 
@@ -1350,6 +1338,7 @@ Interpreter walks the tree starting at the root.
     
 */
 
+class Interpreter extends _Decoratable {
   visit(tree) {
     if (tree.data in this) {
       return this[tree.data](tree);
@@ -1386,7 +1375,6 @@ class Symbol extends Serialize {
   }
 
   eq(other) {
-    console.assert(other instanceof Symbol, other);
     return this.is_term === other.is_term && this.name === other.name;
   }
 
@@ -1471,15 +1459,15 @@ class RuleOptions extends Serialize {
   }
 }
 
-class Rule extends Serialize {
-  /*
-
+/*
+  
         origin : a symbol
         expansion : a list of symbols
         order : index of this expansion amongst all rules of the same name
     
 */
 
+class Rule extends Serialize {
   static get __serialize_fields__() {
     return ["origin", "expansion", "order", "alias", "options"];
   }
@@ -1640,7 +1628,6 @@ class TerminalDef extends Serialize {
   }
   constructor(name, pattern, priority = 1) {
     super();
-    console.assert(pattern instanceof Pattern, pattern);
     this.name = name;
     this.pattern = pattern;
     this.priority = priority;
@@ -1660,9 +1647,8 @@ class TerminalDef extends Serialize {
   }
 }
 
-class Token {
-  /*
-A string with meta-information, that is produced by the lexer.
+/*
+  A string with meta-information, that is produced by the lexer.
 
     When parsing text, the resulting chunks of the input that haven't been discarded,
     will end up in the tree as Token instances. The Token class inherits from Python's ``str``,
@@ -1682,6 +1668,7 @@ A string with meta-information, that is produced by the lexer.
     
 */
 
+class Token {
   constructor(
     type_,
     value,
@@ -1761,14 +1748,13 @@ class LineCounter {
     );
   }
 
-  feed(token, test_newline = true) {
-    /*
-Consume a token and calculate the new line & column.
+  /*
+    Consume a token and calculate the new line & column.
 
         As an optional optimization, set test_newline=False if token doesn't contain a newline.
         
-*/
-
+  */
+  feed(token, test_newline = true) {
     let newlines;
     if (test_newline) {
       newlines = str_count(token, this.newline_char);
@@ -1818,7 +1804,6 @@ const CallChain = callable_class(_CallChain);
 function _create_unless(terminals, g_regex_flags, re_, use_bytes) {
   let s, unless;
   let tokens_by_type = classify(terminals, (t) => t.pattern.constructor.name);
-  console.assert(tokens_by_type.size <= 2, dict_keys(tokens_by_type));
   let embedded_strs = new Set();
   let callback = {};
   for (const retok of tokens_by_type.get('PatternRE') || []) {
@@ -1856,17 +1841,16 @@ function _create_unless(terminals, g_regex_flags, re_, use_bytes) {
   return [new_terminals, callback];
 }
 
-function _regexp_has_newline(r) {
-  /*
-Expressions that may indicate newlines in a regexp:
+/*
+    Expressions that may indicate newlines in a regexp:
         - newlines (\n)
         - escaped newline (\\n)
         - anything but ([^...])
         - any-char (.) when the flag (?s) exists
         - spaces (\s)
     
-*/
-
+  */
+function _regexp_has_newline(r) {
   return (
     r.includes("\n") ||
     r.includes("\\n") ||
@@ -1876,15 +1860,15 @@ Expressions that may indicate newlines in a regexp:
   );
 }
 
-class Lexer {
-  /*
-Lexer interface
+/*
+  Lexer interface
 
     Method Signatures:
         lex(self, text) -> Iterator[Token]
     
 */
 
+class Lexer {
   static get lex() {
     return NotImplemented;
   }
@@ -1903,13 +1887,13 @@ function sort_by_key_tuple(arr, key) {
     let tb = key(b)
     for (let i=0; i<ta.length; i++) {
       if (ta[i] > tb[i]) {
-        return 1
+        return 1;
       }
       else if (ta[i] < tb[i]) {
-        return -1
+        return -1;
       }
     }
-    return 0
+    return 0;
   })
 }
 
@@ -1918,10 +1902,6 @@ class TraditionalLexer extends Lexer {
   constructor(conf) {
     super();
     let terminals = [...conf.terminals];
-    console.assert(
-      all(terminals.map((t) => t instanceof TerminalDef)),
-      terminals
-    );
     this.re = conf.re_module;
     if (!conf.skip_validation) {
       // Sanitization
@@ -1987,7 +1967,6 @@ class TraditionalLexer extends Lexer {
       this.re,
       this.use_bytes
     );
-    console.assert(all(dict_values(this.callback)));
     for (const [type_, f] of dict_items(this.user_callbacks)) {
       if (type_ in this.callback) {
         // Already a callback there, probably UnlessCallback
@@ -2152,7 +2131,6 @@ class ContextualLexer extends Lexer {
       this.lexers[state] = lexer;
     }
 
-    console.assert(trad_conf.terminals === terminals);
     this.root_lexer = new TraditionalLexer(trad_conf);
   }
 
@@ -2198,13 +2176,11 @@ class ContextualLexer extends Lexer {
   }
 }
 
-// Raise the original UnexpectedCharacters. The root lexer raises it with the wrong expected set.
-
-class LexerThread {
-  /*
-A thread that ties a lexer instance and a lexer state, to be used by the parser
+/*
+  A thread that ties a lexer instance and a lexer state, to be used by the parser
 */
 
+class LexerThread {
   constructor(lexer, text) {
     this.lexer = lexer;
     this.state = lexer.make_lexer_state(text);
@@ -2241,7 +2217,6 @@ class LexerConf extends Serialize {
     this.terminals_by_name = Object.fromEntries(
       this.terminals.map((t) => [t.name, t])
     );
-    console.assert(this.terminals.length === this.terminals_by_name.length);
     this.ignore = ignore;
     this.postlex = postlex;
     this.callbacks = callbacks || {};
@@ -2265,7 +2240,6 @@ class ParserConf extends Serialize {
   }
   constructor(rules, callbacks, start) {
     super();
-    console.assert(is_array(start));
     this.rules = rules;
     this.callbacks = callbacks;
     this.start = start;
@@ -2418,11 +2392,11 @@ class _ChildFilter {
 }
 
 const ChildFilter = callable_class(_ChildFilter);
-class _ChildFilterLALR extends _ChildFilter {
-  /*
-Optimized childfilter for LALR (assumes no duplication in parse tree, so it's safe to change it)
+/*
+  Optimized childfilter for LALR (assumes no duplication in parse tree, so it's safe to change it)
 */
 
+class _ChildFilterLALR extends _ChildFilter {
   __call__(children) {
     let filtered = [];
     for (const [i, to_expand, add_none] of this.to_include) {
@@ -2451,11 +2425,11 @@ Optimized childfilter for LALR (assumes no duplication in parse tree, so it's sa
 }
 
 const ChildFilterLALR = callable_class(_ChildFilterLALR);
-class _ChildFilterLALR_NoPlaceholders extends _ChildFilter {
-  /*
-Optimized childfilter for LALR (assumes no duplication in parse tree, so it's safe to change it)
+/*
+  Optimized childfilter for LALR (assumes no duplication in parse tree, so it's safe to change it)
 */
 
+class _ChildFilterLALR_NoPlaceholders extends _ChildFilter {
   constructor(to_include, node_builder) {
     super();
     this.node_builder = node_builder;
@@ -2497,13 +2471,8 @@ function maybe_create_child_filter(
   let empty_indices, s;
   // Prepare empty_indices as: How many Nones to insert at each index?
   if (_empty_indices.length) {
-    console.assert(list_count(_empty_indices, false) === expansion.length);
     s = _empty_indices.map((b) => (0 + b).toString()).join("");
     empty_indices = s.split("0").map((ones) => ones.length);
-    console.assert(empty_indices.length === expansion.length + 1, [
-      empty_indices,
-      expansion.length,
-    ]);
   } else {
     empty_indices = list_repeat([0], expansion.length + 1);
   }
@@ -2539,14 +2508,14 @@ function maybe_create_child_filter(
   }
 }
 
-class _AmbiguousExpander {
-  /*
-Deal with the case where we're expanding children ('_rule') into a parent but the children
+/*
+  Deal with the case where we're expanding children ('_rule') into a parent but the children
        are ambiguous. i.e. (parent->_ambig->_expand_this_rule). In this case, make the parent itself
        ambiguous with as many copies as their are ambiguous children, and then copy the ambiguous children
        into the right parents in the right places, essentially shifting the ambiguity up the tree.
 */
 
+class _AmbiguousExpander {
   constructor(to_expand, tree_class, node_builder) {
     this.node_builder = node_builder;
     this.tree_class = tree_class;
@@ -2609,9 +2578,8 @@ function maybe_create_ambiguous_expander(
   }
 }
 
-class _AmbiguousIntermediateExpander {
-  /*
-
+/*
+  
     Propagate ambiguous intermediate nodes and their derivations up to the
     current rule.
 
@@ -2652,6 +2620,7 @@ class _AmbiguousIntermediateExpander {
     
 */
 
+class _AmbiguousIntermediateExpander {
   constructor(tree_class, node_builder) {
     this.node_builder = node_builder;
     this.tree_class = tree_class;
@@ -2663,16 +2632,15 @@ class _AmbiguousIntermediateExpander {
       return "data" in child && child.data === "_iambig";
     }
 
-    function _collapse_iambig(children) {
-      /*
-
+    /*
+    
             Recursively flatten the derivations of the parent of an '_iambig'
             node. Returns a list of '_inter' nodes guaranteed not
             to contain any nested '_iambig' nodes, or None if children does
             not contain an '_iambig' node.
             
-*/
-
+  */
+    function _collapse_iambig(children) {
       let collapsed, iambig_node, new_tree, result;
       // Due to the structure of the SPPF,
       // an '_iambig' node can only appear as the first child
@@ -2964,12 +2932,7 @@ class ParserState {
     let callbacks = this.parse_conf.callbacks;
     while (true) {
       state = last_item(state_stack);
-      if (
-        states[state] &&
-        states &&
-        token.type in states[state] &&
-        state in states
-      ) {
+      if ( token.type in states[state] ) {
         [action, arg] = states[state][token.type];
       } else {
         expected = new Set(
@@ -2984,10 +2947,9 @@ class ParserState {
           interactive_parser: null,
         });
       }
-      console.assert(arg !== end_state);
       if (action === Shift) {
         // shift once and return
-        console.assert(!is_end);
+
         state_stack.push(arg);
         value_stack.push(
           !(token.type in callbacks) ? token : callbacks[token.type](token)
@@ -3006,7 +2968,6 @@ class ParserState {
         }
         value = callbacks.get(rule)(s);
         [_action, new_state] = states[last_item(state_stack)][rule.origin.name];
-        console.assert(_action === Shift);
         state_stack.push(new_state);
         value_stack.push(value);
         if (is_end && last_item(state_stack) === end_state) {
@@ -3100,48 +3061,45 @@ class _Parser {
 
 // This module provides a LALR interactive parser, which is used for debugging and error handling
 
-class InteractiveParser {
-  /*
-InteractiveParser gives you advanced control over parsing and error handling when parsing with LALR.
+/*
+  InteractiveParser gives you advanced control over parsing and error handling when parsing with LALR.
 
     For a simpler interface, see the ``on_error`` argument to ``Lark.parse()``.
     
 */
 
+class InteractiveParser {
   constructor(parser, parser_state, lexer_state) {
     this.parser = parser;
     this.parser_state = parser_state;
     this.lexer_state = lexer_state;
   }
 
-  feed_token(token) {
-    /*
-Feed the parser with a token, and advance it to the next state, as if it received it from the lexer.
+  /*
+    Feed the parser with a token, and advance it to the next state, as if it received it from the lexer.
 
         Note that ``token`` has to be an instance of ``Token``.
         
-*/
-
+  */
+  feed_token(token) {
     return this.parser_state.feed_token(token, token.type === "$END");
   }
 
-  exhaust_lexer() {
-    /*
-Try to feed the rest of the lexer state into the interactive parser.
+  /*
+    Try to feed the rest of the lexer state into the interactive parser.
         
         Note that this modifies the instance in place and does not feed an '$END' Token
-*/
-
+  */
+  exhaust_lexer() {
     for (const token of this.lexer_state.lex(this.parser_state)) {
       this.parser_state.feed_token(token);
     }
   }
 
+  /*
+    Feed a '$END' Token. Borrows from 'last_token' if given.
+  */
   feed_eof(last_token = null) {
-    /*
-Feed a '$END' Token. Borrows from 'last_token' if given.
-*/
-
     let eof =
       last_token !== null
         ? Token.new_borrow_pos("$END", "", last_token)
@@ -3164,11 +3122,10 @@ Feed a '$END' Token. Borrows from 'last_token' if given.
     );
   }
 
+  /*
+    Convert to an ``ImmutableInteractiveParser``.
+  */
   as_immutable() {
-    /*
-Convert to an ``ImmutableInteractiveParser``.
-*/
-
     let p = copy(this);
     return new ImmutableInteractiveParser(
       p.parser,
@@ -3177,11 +3134,10 @@ Convert to an ``ImmutableInteractiveParser``.
     );
   }
 
+  /*
+    Print the output of ``choices()`` in a way that's easier to read.
+  */
   pretty() {
-    /*
-Print the output of ``choices()`` in a way that's easier to read.
-*/
-
     let out = ["Parser choices:"];
     for (const [k, v] of dict_items(this.choices())) {
       out.push(format("\t- %s -> %s", k, v));
@@ -3191,26 +3147,24 @@ Print the output of ``choices()`` in a way that's easier to read.
     return out.join("\n");
   }
 
-  choices() {
-    /*
-Returns a dictionary of token types, matched to their action in the parser.
+  /*
+    Returns a dictionary of token types, matched to their action in the parser.
 
         Only returns token types that are accepted by the current state.
 
         Updated by ``feed_token()``.
         
-*/
-
+  */
+  choices() {
     return this.parser_state.parse_conf.parse_table.states[
       this.parser_state.position
     ];
   }
 
+  /*
+    Returns the set of possible tokens that will advance the parser into a new valid state.
+  */
   accepts() {
-    /*
-Returns the set of possible tokens that will advance the parser into a new valid state.
-*/
-
     let new_cursor;
     let accepts = new Set();
     for (const t of this.choices()) {
@@ -3237,22 +3191,21 @@ Returns the set of possible tokens that will advance the parser into a new valid
     return accepts;
   }
 
+  /*
+    Resume automated parsing from the current state.
+  */
   resume_parse() {
-    /*
-Resume automated parsing from the current state.
-*/
-
     return this.parser.parse_from_state(this.parser_state);
   }
 }
 
-class ImmutableInteractiveParser extends InteractiveParser {
-  /*
-Same as ``InteractiveParser``, but operations create a new instance instead
+/*
+  Same as ``InteractiveParser``, but operations create a new instance instead
     of changing it in-place.
     
 */
 
+class ImmutableInteractiveParser extends InteractiveParser {
   static get result() {
     return null;
   }
@@ -3265,23 +3218,21 @@ Same as ``InteractiveParser``, but operations create a new instance instead
     return c;
   }
 
-  exhaust_lexer() {
-    /*
-Try to feed the rest of the lexer state into the parser.
+  /*
+    Try to feed the rest of the lexer state into the parser.
 
         Note that this returns a new ImmutableInteractiveParser and does not feed an '$END' Token
-*/
-
+  */
+  exhaust_lexer() {
     let cursor = this.as_mutable();
     cursor.exhaust_lexer();
     return cursor.as_immutable();
   }
 
+  /*
+    Convert to an ``InteractiveParser``.
+  */
   as_mutable() {
-    /*
-Convert to an ``InteractiveParser``.
-*/
-
     let p = copy(this);
     return new InteractiveParser(p.parser, p.parser_state, p.lexer_state);
   }
@@ -3462,7 +3413,6 @@ class ParsingFrontend extends Serialize {
     let lexer_type = lexer_conf.lexer_type;
     this.skip_lexer = false;
     if (["dynamic", "dynamic_complete"].includes(lexer_type)) {
-      console.assert(lexer_conf.postlex === null);
       this.skip_lexer = true;
       return;
     }
@@ -3484,7 +3434,6 @@ class ParsingFrontend extends Serialize {
       }[lexer_type];
       this.lexer = create_lexer(lexer_conf, this.parser, lexer_conf.postlex);
     } else {
-      console.assert(issubclass(lexer_type, Lexer), lexer_type);
       this.lexer = _wrap_lexer(lexer_type)(lexer_conf);
     }
     if (lexer_conf.postlex) {
@@ -3624,13 +3573,13 @@ var CYK_FrontEnd = NotImplemented;
 // Lark
 //
 
-class LarkOptions extends Serialize {
-  /*
-Specifies the options for Lark
+/*
+  Specifies the options for Lark
 
     
 */
 
+class LarkOptions extends Serialize {
   static get OPTIONS_DOC() {
     return `
     **===  General Options  ===**
@@ -3819,9 +3768,8 @@ class PostLex extends ABC {
   }
 }
 
-class Lark extends Serialize {
-  /*
-Main interface for the library.
+/*
+  Main interface for the library.
 
     It's mostly a thin wrapper for the many different parsers, and for the tree constructor.
 
@@ -3835,6 +3783,7 @@ Main interface for the library.
     
 */
 
+class Lark extends Serialize {
   constructor({ grammar, ...options } = {}) {
     super();
     let cached_parser_data,
@@ -3975,7 +3924,6 @@ Main interface for the library.
         this.options.keep_all_tokens
       );
     } else {
-      console.assert(grammar instanceof Grammar);
       this.grammar = grammar;
     }
     if (this.options.lexer === "auto") {
@@ -3993,14 +3941,11 @@ Main interface for the library.
         }
       } else if (this.options.parser === "cyk") {
         this.options.lexer = "standard";
-      } else {
-        console.assert(false, this.options.parser);
       }
     }
 
     let lexer = this.options.lexer;
     if (typeof lexer === "object") {
-      console.assert(issubclass(lexer, Lexer));
     } else {
       // XXX Is this really important? Maybe just ensure interface compliance
       assert_config(lexer, [
@@ -4040,10 +3985,6 @@ Main interface for the library.
       );
     }
 
-    console.assert(
-      !["resolve__antiscore_sum"].includes(this.options.ambiguity),
-      'resolve__antiscore_sum has been replaced with the option priority="invert"'
-    );
     if (!_VALID_AMBIGUITY_OPTIONS.includes(this.options.ambiguity)) {
       throw new ConfigurationError(
         format(
@@ -4168,14 +4109,13 @@ Main interface for the library.
     });
   }
 
-  save(f) {
-    /*
-Saves the instance into the given file object
+  /*
+    Saves the instance into the given file object
 
         Useful for caching and multiprocessing.
         
-*/
-
+  */
+  save(f) {
     let [data, m] = this.memo_serialize([TerminalDef, Rule]);
     pickle.dump({
       unknown_param_0: { data: data, memo: m },
@@ -4184,13 +4124,14 @@ Saves the instance into the given file object
     });
   }
 
-  static load(f) {
-    const cls = this; /*
-Loads an instance from the given file object
+  /*
+    Loads an instance from the given file object
 
         Useful for caching and multiprocessing.
         
-*/
+  */
+  static load(f) {
+    const cls = this;
     let inst = new_object(cls);
     return inst._load(f);
   }
@@ -4215,7 +4156,6 @@ Loads an instance from the given file object
     }
     let memo_json = d["memo"];
     let data = d["data"];
-    console.assert(memo_json);
     let memo = SerializeMemoizer.deserialize(
       memo_json,
       { Rule: Rule, TerminalDef: TerminalDef },
@@ -4267,9 +4207,8 @@ Loads an instance from the given file object
     });
   }
 
-  static open({ grammar_filename, rel_to = null, ...options } = {}) {
-    const cls = this; /*
-Create an instance of Lark with the grammar given by its filename
+  /*
+    Create an instance of Lark with the grammar given by its filename
 
         If ``rel_to`` is provided, the function will find the grammar filename in relation to it.
 
@@ -4279,7 +4218,9 @@ Create an instance of Lark with the grammar given by its filename
             Lark(...)
 
         
-*/
+  */
+  static open({ grammar_filename, rel_to = null, ...options } = {}) {
+    const cls = this;
     let basepath;
     if (rel_to) {
       basepath = os.path.dirname(rel_to);
@@ -4289,14 +4230,8 @@ Create an instance of Lark with the grammar given by its filename
     return new cls({ unknown_param_0: f, ...options });
   }
 
-  static open_from_package({
-    package_,
-    grammar_path,
-    search_paths = [""],
-    ...options
-  } = {}) {
-    const cls = this; /*
-Create an instance of Lark with the grammar loaded from within the package `package`.
+  /*
+    Create an instance of Lark with the grammar loaded from within the package `package`.
         This allows grammar loading from zipapps.
 
         Imports in the grammar will use the `package` and `search_paths` provided, through `FromPackageLoader`
@@ -4305,7 +4240,14 @@ Create an instance of Lark with the grammar loaded from within the package `pack
 
             Lark.open_from_package(__name__, "example.lark", ("grammars",), parser=...)
         
-*/
+  */
+  static open_from_package({
+    package_,
+    grammar_path,
+    search_paths = [""],
+    ...options
+  } = {}) {
+    const cls = this;
     let package_loader = new FromPackageLoader(package_, search_paths);
     let [full_path, text] = package_loader(null, grammar_path);
     options.setdefault("source_path", full_path);
@@ -4323,14 +4265,13 @@ Create an instance of Lark with the grammar loaded from within the package `pack
     );
   }
 
-  lex(text, dont_ignore = false) {
-    /*
-Only lex (and postlex) the text, without parsing it. Only relevant when lexer='standard'
+  /*
+    Only lex (and postlex) the text, without parsing it. Only relevant when lexer='standard'
 
         When dont_ignore=True, the lexer will return all tokens, even those marked for %ignore.
         
-*/
-
+  */
+  lex(text, dont_ignore = false) {
     let lexer;
     if (!("lexer" in this) || dont_ignore) {
       lexer = this._build_lexer(dont_ignore);
@@ -4346,17 +4287,15 @@ Only lex (and postlex) the text, without parsing it. Only relevant when lexer='s
     return stream;
   }
 
+  /*
+    Get information about a terminal
+  */
   get_terminal(name) {
-    /*
-Get information about a terminal
-*/
-
     return this._terminals_dict[name];
   }
 
-  parse_interactive(text = null, start = null) {
-    /*
-Start an interactive parsing session.
+  /*
+    Start an interactive parsing session.
 
         Parameters:
             text (str, optional): Text to be parsed. Required for ``resume_parse()``.
@@ -4367,14 +4306,16 @@ Start an interactive parsing session.
 
         See Also: ``Lark.parse()``
         
-*/
-
-    return this.parser.parse_interactive(text, start)
+  */
+  parse_interactive(text = null, start = null) {
+    return this.parser.parse_interactive({
+      unknown_param_0: text,
+      start: start,
+    });
   }
 
-  parse(text, start = null, on_error = null) {
-    /*
-Parse the given text, according to the options provided.
+  /*
+    Parse the given text, according to the options provided.
 
         Parameters:
             text (str): Text to be parsed.
@@ -4387,8 +4328,8 @@ Parse the given text, according to the options provided.
             result of the transformation. Otherwise, returns a Tree instance.
 
         
-*/
-
+  */
+  parse(text, start = null, on_error = null) {
     return this.parser.parse(text, start, on_error);
   }
 }
@@ -4452,7 +4393,6 @@ class Indenter extends PostLex {
         this.paren_level += 1;
       } else if (this.CLOSE_PAREN_types.includes(token.type)) {
         this.paren_level -= 1;
-        console.assert(this.paren_level >= 0);
       }
     }
 
@@ -4460,7 +4400,6 @@ class Indenter extends PostLex {
       this.indent_level.pop();
       yield new Token(this.DEDENT_type, "");
     }
-
   }
 
   process(stream) {
@@ -4546,5 +4485,5 @@ module.exports = {
   Lark,
   DedentError,
   Indenter,
-  load_parser,
+  get_parser,
 };
