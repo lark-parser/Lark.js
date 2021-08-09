@@ -1,35 +1,36 @@
+var { map, find, findKey, extend } = require('underscore');
+
 //
 //  Lark.js stand-alone parser
 //===============================
 
 "use strict";
 
+// Main interface, returns a parser object that implements the grammar for
+// which this module was generated. The parser object has a .parse method that
+// accepts a string as its first argument and returns the parse tree.
+// Allowed options:
+//   - transformer: explanation
+//   - propagate_positions: explanation
+//   - tree_class: explanation
+//   - debug: explanation
 function load_parser(options = {}) {
-  `
-  Allowed options:
-    - transformer
-    - propagate_positions
-    - tree_class
-    - debug (untested)
+    if (
+        options.transformer &&
+        options.transformer.constructor.name === "object"
+    ) {
+        options.transformer = Transformer.fromObj(options.transformer);
+    }
 
-    To test: postlex, lexer_callbacks, g_regex_flags
-  `;
-  if (
-    options.transformer &&
-    options.transformer.constructor.name === "object"
-  ) {
-    options.transformer = Transformer.fromObj(options.transformer);
-  }
-
-  return Lark._load_from_dict({ data: DATA, memo: MEMO, ...options });
+    return Lark._load_from_dict({ data: DATA, memo: MEMO, ...options });
 }
 
 const NO_VALUE = {};
 class _Decoratable {}
 
 //
-//   Implementation of Scanner + Regular expression polyfill
-// ----------------------------------------------------------
+//   Implementation of Scanner + Python stdlib re module emulation
+// ---------------------------------------------------------------
 
 const re = {
   escape(string) {
@@ -44,19 +45,14 @@ const re = {
 };
 
 function _get_match(re_, regexp, s, flags) {
-  const m = re_.compile(regexp, flags).exec(s);
-  if (m != null) return m[0];
+  const match = re_.compile(regexp, flags).exec(s);
+  if (match != null) return match[0];
 }
 
 class Scanner {
   constructor(terminals, g_regex_flags, re_, use_bytes, match_whole = false) {
-    this.terminals = terminals;
-    this.g_regex_flags = g_regex_flags;
-    this.re_ = re_;
-    this.use_bytes = use_bytes;
-    this.match_whole = match_whole;
-    this.allowed_types = new Set(this.terminals.map((t) => t.name));
-
+    extend(this, {terminals, g_regex_flags, re_, use_bytes, match_whole});
+    this.allowed_types = new Set(map(this.terminals, 'name'));
     this._regexps = this._build_mres(terminals);
   }
 
@@ -67,35 +63,29 @@ class Scanner {
       t.pattern.flags.join("")
     );
 
-    let regexps = [];
-    for (let [flags, patterns] of patterns_by_flags) {
-      const pattern = patterns
-        .map((t) => `(?<${t.name}>${t.pattern.to_regexp() + postfix})`)
-        .join("|");
-      regexps.push(new RegExp(pattern, this.g_regex_flags + flags + "y"));
-    }
-
-    return regexps;
+    return map(patterns_by_flags, ([flags, patterns]) => {
+      const pattern = map(
+        patterns, (t) => `(?<${t.name}>${t.pattern.to_regexp() + postfix})`
+      ).join("|");
+      return new RegExp(pattern, this.g_regex_flags + flags + "y");
+    });
   }
 
   match(text, pos) {
-    for (const re of this._regexps) {
+    let result;
+    find(this._regexps, (re) => {
       re.lastIndex = pos;
       let m = re.exec(text);
       if (m) {
-        // Find group. Ugly hack, but javascript is forcing my hand.
-        let group = null;
-        for (let [k, v] of Object.entries(m.groups)) {
-          if (v) {
-            group = k;
-            break;
-          }
-        }
-        return [m[0], group];
+        let group = findKey(m.groups) || null;
+        return result = [m[0], group];
       }
-    }
+    });
+    return result;
   }
-} //
+}
+
+//
 //  Start of library code
 // --------------------------
 
@@ -324,19 +314,21 @@ function isSubset(subset, set) {
   return true;
 }
 
-function* segment_by_key(a, key) {
+function segment_by_key(a, key) {
+  const result = [];
   let buffer = [];
   let last_k = null;
-  for (const item of a) {
+  for (let i = 0, l = a.length, item = a[i]; i < l; item = a[++i]) {
     const k = key(item);
     if (last_k && k != last_k) {
-      yield [last_k, buffer];
+      result.push([last_k, buffer]);
       buffer = [];
     }
     buffer.push(item);
     last_k = k;
   }
-  yield [last_k, buffer];
+  result.push([last_k, buffer]);
+  return result;
 }
 
 // --------------------------
@@ -375,7 +367,7 @@ class LexError extends LarkError {
 
 class UnexpectedInput extends LarkError {
   /*
-UnexpectedInput Error.
+    UnexpectedInput Error.
 
     Used as a base class for the following exceptions:
 
@@ -383,8 +375,8 @@ UnexpectedInput Error.
     - ``UnexpectedCharacters``: The lexer encountered an unexpected string
 
     After catching one of these exceptions, you may call the following helper methods to create a nicer error message.
-    
-*/
+
+  */
 
   static get pos_in_stream() {
     return null;
@@ -406,7 +398,7 @@ Returns a pretty string pinpointing the error in the text,
         Note:
             The parser doesn't hold a copy of the text it has to parse,
             so you have to provide it again
-        
+
 */
 
     let after, before;
@@ -454,7 +446,7 @@ Allows you to detect what's wrong in the input text by matching
             examples: dictionary of ``{'example_string': value}``.
             use_accepts: Recommended to call this with ``use_accepts=True``.
                 The default is ``False`` for backwards compatibility.
-        
+
 */
 
     console.assert(this.state !== null, "Not supported for this exception");
@@ -604,7 +596,7 @@ An exception that is raised by the parser, when the token it received
     which is initialized to the point of failture, and can be used for debugging and error handling.
 
     see: ``InteractiveParser``.
-    
+
 */
 
   constructor({
@@ -649,7 +641,7 @@ VisitError is raised when visitors are interrupted by an exception
     It provides the following attributes for inspection:
     - obj: the tree node or token it was processing when the exception was raised
     - orig_exc: the exception that cause it to fail
-    
+
 */
 
   constructor(rule, obj, orig_exc) {
@@ -716,7 +708,7 @@ Safe-ish serialization interface that doesn't rely on Pickle
         __serialize_fields__ (List[str]): Fields (aka attributes) to serialize.
         __serialize_namespace__ (list): List of classes that deserialization is allowed to instantiate.
                                         Should include all field types that aren't builtin types.
-    
+
 */
 
   memo_serialize(types_to_memoize) {
@@ -817,7 +809,7 @@ The main tree class.
         children: List of matched sub-rules and terminals
         meta: Line & Column numbers (if ``propagate_positions`` is enabled).
             meta attributes: line, column, start_pos, end_line, end_column, end_pos
-    
+
 */
 
   constructor(data, children, meta = null) {
@@ -870,7 +862,7 @@ The main tree class.
 Returns an indented string representation of the tree.
 
         Great for debugging.
-        
+
 */
 
     return this._pretty(0, indent_str).join("");
@@ -898,7 +890,7 @@ Returns an indented string representation of the tree.
 Depth-first iteration.
 
         Iterates over all the subtrees, never returning to the same node twice (Lark's parse-tree is actually a DAG).
-        
+
 */
 
     let queue = [this];
@@ -941,7 +933,7 @@ Return all values in the tree that evaluate pred(value) as true.
 
         Example:
             >>> all_tokens = tree.scan_values(lambda v: isinstance(v, Token))
-        
+
 */
 
     for (const c of this.children) {
@@ -962,7 +954,7 @@ Return all values in the tree that evaluate pred(value) as true.
 Breadth-first iteration.
 
         Iterates over all the subtrees, return nodes in order like pretty() does.
-        
+
 */
 
     let node;
@@ -998,7 +990,7 @@ class Discard extends Error {
   /*
 When raising the Discard exception in a transformer callback,
     that node is discarded and won't appear in the parent.
-    
+
 */
   // pass
 }
@@ -1029,7 +1021,7 @@ Transformers visit each node of the tree, and run the appropriate method on it a
                                        (For processing ignored tokens, use the ``lexer_callbacks`` options)
 
     NOTE: A transformer without methods essentially performs a non-memoized partial deepcopy.
-    
+
 */
 
   static get __visit_tokens__() {
@@ -1135,7 +1127,7 @@ Transform the given tree, and return the final result
 Default function that is called if there is no attribute matching ``data``
 
         Can be overridden. Defaults to creating a new copy of the tree node (i.e. ``return Tree(data, children, meta)``)
-        
+
 */
 
     return new Tree(data, children, meta);
@@ -1146,7 +1138,7 @@ Default function that is called if there is no attribute matching ``data``
 Default function that is called if there is no attribute matching ``token.type``
 
         Can be overridden. Defaults to returning the token as-is.
-        
+
 */
 
     return token;
@@ -1158,7 +1150,7 @@ class Transformer_InPlace extends Transformer {
 Same as Transformer, but non-recursive, and changes the tree in-place instead of returning new instances
 
     Useful for huge trees. Conservative in memory.
-    
+
 */
 
   _transform_tree(tree) {
@@ -1182,7 +1174,7 @@ Same as Transformer but non-recursive.
     Like Transformer, it doesn't change the original tree.
 
     Useful for huge trees.
-    
+
 */
 
   transform(tree) {
@@ -1251,7 +1243,7 @@ class VisitorBase {
 Default function that is called if there is no attribute matching ``tree.data``
 
         Can be overridden. Defaults to doing nothing.
-        
+
 */
 
     return tree;
@@ -1267,7 +1259,7 @@ class Visitor extends VisitorBase {
 Tree visitor, non-recursive (can handle huge trees).
 
     Visiting a node calls its methods (provided by the user via inheritance) according to ``tree.data``
-    
+
 */
 
   visit(tree) {
@@ -1302,7 +1294,7 @@ Bottom-up visitor, recursive.
     Visiting a node calls its methods (provided by the user via inheritance) according to ``tree.data``
 
     Slightly faster than the non-recursive version.
-    
+
 */
 
   visit(tree) {
@@ -1347,7 +1339,7 @@ Interpreter walks the tree starting at the root.
     Unlike ``Transformer`` and ``Visitor``, the Interpreter doesn't automatically visit its sub-branches.
     The user has to explicitly call ``visit``, ``visit_children``, or use the ``@visit_children_decor``.
     This allows the user to implement branching and loops.
-    
+
 */
 
   visit(tree) {
@@ -1477,7 +1469,7 @@ class Rule extends Serialize {
         origin : a symbol
         expansion : a list of symbols
         order : index of this expansion amongst all rules of the same name
-    
+
 */
 
   static get __serialize_fields__() {
@@ -1679,7 +1671,7 @@ A string with meta-information, that is produced by the lexer.
             if the token is a single character with a column value of 4,
             end_column will be 5.
         end_pos: the index where the token ends (basically ``start_pos + len(token)``)
-    
+
 */
 
   constructor(
@@ -1766,7 +1758,7 @@ class LineCounter {
 Consume a token and calculate the new line & column.
 
         As an optional optimization, set test_newline=False if token doesn't contain a newline.
-        
+
 */
 
     let newlines;
@@ -1864,7 +1856,7 @@ Expressions that may indicate newlines in a regexp:
         - anything but ([^...])
         - any-char (.) when the flag (?s) exists
         - spaces (\s)
-    
+
 */
 
   return (
@@ -1882,7 +1874,7 @@ Lexer interface
 
     Method Signatures:
         lex(self, text) -> Iterator[Token]
-    
+
 */
 
   static get lex() {
@@ -2649,7 +2641,7 @@ class _AmbiguousIntermediateExpander {
       ...
 
     propagating up any nested '_iambig' nodes along the way.
-    
+
 */
 
   constructor(tree_class, node_builder) {
@@ -2670,7 +2662,7 @@ class _AmbiguousIntermediateExpander {
             node. Returns a list of '_inter' nodes guaranteed not
             to contain any nested '_iambig' nodes, or None if children does
             not contain an '_iambig' node.
-            
+
 */
 
       let collapsed, iambig_node, new_tree, result;
@@ -3105,7 +3097,7 @@ class InteractiveParser {
 InteractiveParser gives you advanced control over parsing and error handling when parsing with LALR.
 
     For a simpler interface, see the ``on_error`` argument to ``Lark.parse()``.
-    
+
 */
 
   constructor(parser, parser_state, lexer_state) {
@@ -3119,7 +3111,7 @@ InteractiveParser gives you advanced control over parsing and error handling whe
 Feed the parser with a token, and advance it to the next state, as if it received it from the lexer.
 
         Note that ``token`` has to be an instance of ``Token``.
-        
+
 */
 
     return this.parser_state.feed_token(token, token.type === "$END");
@@ -3128,7 +3120,7 @@ Feed the parser with a token, and advance it to the next state, as if it receive
   exhaust_lexer() {
     /*
 Try to feed the rest of the lexer state into the interactive parser.
-        
+
         Note that this modifies the instance in place and does not feed an '$END' Token
 */
 
@@ -3198,7 +3190,7 @@ Returns a dictionary of token types, matched to their action in the parser.
         Only returns token types that are accepted by the current state.
 
         Updated by ``feed_token()``.
-        
+
 */
 
     return this.parser_state.parse_conf.parse_table.states[
@@ -3250,7 +3242,7 @@ class ImmutableInteractiveParser extends InteractiveParser {
   /*
 Same as ``InteractiveParser``, but operations create a new instance instead
     of changing it in-place.
-    
+
 */
 
   static get result() {
@@ -3628,7 +3620,7 @@ class LarkOptions extends Serialize {
   /*
 Specifies the options for Lark
 
-    
+
 */
 
   static get OPTIONS_DOC() {
@@ -3832,7 +3824,7 @@ Main interface for the library.
     Example:
         >>> Lark(r'''start: "foo" ''')
         Lark(...)
-    
+
 */
 
   constructor({ grammar, ...options } = {}) {
@@ -4173,7 +4165,7 @@ Main interface for the library.
 Saves the instance into the given file object
 
         Useful for caching and multiprocessing.
-        
+
 */
 
     let [data, m] = this.memo_serialize([TerminalDef, Rule]);
@@ -4189,7 +4181,7 @@ Saves the instance into the given file object
 Loads an instance from the given file object
 
         Useful for caching and multiprocessing.
-        
+
 */
     let inst = new_object(cls);
     return inst._load(f);
@@ -4278,7 +4270,7 @@ Create an instance of Lark with the grammar given by its filename
             >>> Lark.open("grammar_file.lark", rel_to=__file__, parser="lalr")
             Lark(...)
 
-        
+
 */
     let basepath;
     if (rel_to) {
@@ -4304,7 +4296,7 @@ Create an instance of Lark with the grammar loaded from within the package `pack
         Example:
 
             Lark.open_from_package(__name__, "example.lark", ("grammars",), parser=...)
-        
+
 */
     let package_loader = new FromPackageLoader(package_, search_paths);
     let [full_path, text] = package_loader(null, grammar_path);
@@ -4328,7 +4320,7 @@ Create an instance of Lark with the grammar loaded from within the package `pack
 Only lex (and postlex) the text, without parsing it. Only relevant when lexer='standard'
 
         When dont_ignore=True, the lexer will return all tokens, even those marked for %ignore.
-        
+
 */
 
     let lexer;
@@ -4366,7 +4358,7 @@ Start an interactive parsing session.
             A new InteractiveParser instance.
 
         See Also: ``Lark.parse()``
-        
+
 */
 
     return this.parser.parse_interactive(text, start)
@@ -4386,7 +4378,7 @@ Parse the given text, according to the options provided.
             If a transformer is supplied to ``__init__``, returns whatever is the
             result of the transformation. Otherwise, returns a Tree instance.
 
-        
+
 */
 
     return this.parser.parse(text, start, on_error);
