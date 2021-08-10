@@ -12,6 +12,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
+      - name: Install requirements
+        run: npm i jsdoc-autoprivate docdash
+
       - name: Build
         uses: andstor/jsdoc-action@v1
         with:
