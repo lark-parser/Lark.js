@@ -4,21 +4,22 @@
 
 "use strict";
 
-/*
+/**
 	This is the main entrypoint into the generated Lark parser.
 
-	Parameters:
-		options (bool). An object with the following optional properties: 
-		  - transformer: an object of {rule: callback}, or an instance of Transformer
-		  - propagate_positions (bool): should all tree nodes calculate line/column info?
-		  - tree_class (Tree): a class that extends Tree, to be used for creating the parse tree.
-		  - debug (bool): in case of error, should the parser output debug info to the console?
+  @param {object} options An object with the following optional properties: 
 
-	Returns:
-	 instance of Lark, which provides the following methods:
-	   - parse
-	   - parse_interactive
-	   - lex
+	  - transformer: an object of {rule: callback}, or an instance of Transformer
+	  - propagate_positions (bool): should all tree nodes calculate line/column info?
+	  - tree_class (Tree): a class that extends Tree, to be used for creating the parse tree.
+	  - debug (bool): in case of error, should the parser output debug info to the console?
+
+  @returns {Lark} an object which provides the following methods:
+
+    - parse
+    - parse_interactive
+    - lex
+
 */
 function get_parser(options = {}) {
   if (
@@ -381,7 +382,7 @@ class LexError extends LarkError {
   // pass
 }
 
-/*
+/**
   UnexpectedInput Error.
 
     Used as a base class for the following exceptions:
@@ -406,7 +407,7 @@ class UnexpectedInput extends LarkError {
   get _terminals_by_name() {
     return this.constructor._terminals_by_name;
   }
-  /*
+  /**
     Returns a pretty string pinpointing the error in the text,
         with span amount of context characters around it.
 
@@ -437,7 +438,7 @@ class UnexpectedInput extends LarkError {
     }
   }
 
-  /*
+  /**
     Allows you to detect what's wrong in the input text by matching
         against example errors.
 
@@ -598,7 +599,7 @@ class UnexpectedCharacters extends LexError {
   }
 }
 
-/*
+/**
   An exception that is raised by the parser, when the token it received
     doesn't match any valid step forward.
 
@@ -645,7 +646,7 @@ class UnexpectedToken extends ParseError {
   }
 }
 
-/*
+/**
   VisitError is raised when visitors are interrupted by an exception
 
     It provides the following attributes for inspection:
@@ -711,7 +712,7 @@ function _deserialize(data, namespace, memo) {
   return data;
 }
 
-/*
+/**
   Safe-ish serialization interface that doesn't rely on Pickle
 
     Attributes:
@@ -748,7 +749,7 @@ class Serialize {
   }
 }
 
-/*
+/**
   A version of serialize that memoizes objects to reduce space
 */
 
@@ -786,7 +787,7 @@ class Meta {
   }
 }
 
-/*
+/**
   The main tree class.
 
     Creates a new tree, and stores "data" and "children" in attributes of the same name.
@@ -846,7 +847,7 @@ class Tree {
     return l;
   }
 
-  /*
+  /**
     Returns an indented string representation of the tree.
 
         Great for debugging.
@@ -873,7 +874,7 @@ class Tree {
     }
   }
 
-  /*
+  /**
     Depth-first iteration.
 
         Iterates over all the subtrees, never returning to the same node twice (Lark's parse-tree is actually a DAG).
@@ -896,21 +897,21 @@ class Tree {
     return [...subtrees.values()].reverse();
   }
 
-  /*
+  /**
     Returns all nodes of the tree that evaluate pred(node) as true.
   */
   find_pred(pred) {
     return filter(pred, this.iter_subtrees());
   }
 
-  /*
+  /**
     Returns all nodes of the tree whose data equals the given data.
   */
   find_data(data) {
     return this.find_pred((t) => t.data === data);
   }
 
-  /*
+  /**
     Return all values in the tree that evaluate pred(value) as true.
 
         This can be used to find all the tokens in the tree.
@@ -933,7 +934,7 @@ class Tree {
     }
   }
 
-  /*
+  /**
     Breadth-first iteration.
 
         Iterates over all the subtrees, return nodes in order like pretty() does.
@@ -969,7 +970,7 @@ class Tree {
 // Visitors
 //
 
-/*
+/**
   When raising the Discard exception in a transformer callback,
     that node is discarded and won't appear in the parent.
     
@@ -979,7 +980,7 @@ class Discard extends Error {
   // pass
 }
 
-/*
+/**
   Transformers visit each node of the tree, and run the appropriate method on it according to the node's data.
 
     Methods are provided by the user via inheritance, and called according to ``tree.data``.
@@ -1098,14 +1099,14 @@ class Transformer extends _Decoratable {
     return this._call_userfunc(tree, children);
   }
 
-  /*
+  /**
     Transform the given tree, and return the final result
   */
   transform(tree) {
     return this._transform_tree(tree);
   }
 
-  /*
+  /**
     Default function that is called if there is no attribute matching ``data``
 
         Can be overridden. Defaults to creating a new copy of the tree node (i.e. ``return Tree(data, children, meta)``)
@@ -1115,7 +1116,7 @@ class Transformer extends _Decoratable {
     return new Tree(data, children, meta);
   }
 
-  /*
+  /**
     Default function that is called if there is no attribute matching ``token.type``
 
         Can be overridden. Defaults to returning the token as-is.
@@ -1126,7 +1127,7 @@ class Transformer extends _Decoratable {
   }
 }
 
-/*
+/**
   Same as Transformer, but non-recursive, and changes the tree in-place instead of returning new instances
 
     Useful for huge trees. Conservative in memory.
@@ -1148,7 +1149,7 @@ class Transformer_InPlace extends Transformer {
   }
 }
 
-/*
+/**
   Same as Transformer but non-recursive.
 
     Like Transformer, it doesn't change the original tree.
@@ -1196,7 +1197,7 @@ class Transformer_NonRecursive extends Transformer {
   }
 }
 
-/*
+/**
   Same as Transformer, recursive, but changes the tree in-place instead of returning new instances
 */
 
@@ -1219,7 +1220,7 @@ class VisitorBase {
     }
   }
 
-  /*
+  /**
     Default function that is called if there is no attribute matching ``tree.data``
 
         Can be overridden. Defaults to doing nothing.
@@ -1234,7 +1235,7 @@ class VisitorBase {
   }
 }
 
-/*
+/**
   Tree visitor, non-recursive (can handle huge trees).
 
     Visiting a node calls its methods (provided by the user via inheritance) according to ``tree.data``
@@ -1242,7 +1243,7 @@ class VisitorBase {
 */
 
 class Visitor extends VisitorBase {
-  /*
+  /**
     Visits the tree, starting with the leaves and finally the root (bottom-up)
   */
   visit(tree) {
@@ -1253,7 +1254,7 @@ class Visitor extends VisitorBase {
     return tree;
   }
 
-  /*
+  /**
     Visit the tree, starting at the root, and ending at the leaves (top-down)
   */
   visit_topdown(tree) {
@@ -1265,7 +1266,7 @@ class Visitor extends VisitorBase {
   }
 }
 
-/*
+/**
   Bottom-up visitor, recursive.
 
     Visiting a node calls its methods (provided by the user via inheritance) according to ``tree.data``
@@ -1275,7 +1276,7 @@ class Visitor extends VisitorBase {
 */
 
 class Visitor_Recursive extends VisitorBase {
-  /*
+  /**
     Visits the tree, starting with the leaves and finally the root (bottom-up)
   */
   visit(tree) {
@@ -1289,7 +1290,7 @@ class Visitor_Recursive extends VisitorBase {
     return tree;
   }
 
-  /*
+  /**
     Visit the tree, starting at the root, and ending at the leaves (top-down)
   */
   visit_topdown(tree) {
@@ -1304,7 +1305,7 @@ class Visitor_Recursive extends VisitorBase {
   }
 }
 
-/*
+/**
   Interpreter walks the tree starting at the root.
 
     Visits the tree, starting with the root and finally the leaves (top-down)
@@ -1438,7 +1439,7 @@ class RuleOptions extends Serialize {
   }
 }
 
-/*
+/**
   
         origin : a symbol
         expansion : a list of symbols
@@ -1626,7 +1627,7 @@ class TerminalDef extends Serialize {
   }
 }
 
-/*
+/**
   A string with meta-information, that is produced by the lexer.
 
     When parsing text, the resulting chunks of the input that haven't been discarded,
@@ -1727,7 +1728,7 @@ class LineCounter {
     );
   }
 
-  /*
+  /**
     Consume a token and calculate the new line & column.
 
         As an optional optimization, set test_newline=False if token doesn't contain a newline.
@@ -1820,7 +1821,7 @@ function _create_unless(terminals, g_regex_flags, re_, use_bytes) {
   return [new_terminals, callback];
 }
 
-/*
+/**
     Expressions that may indicate newlines in a regexp:
         - newlines (\n)
         - escaped newline (\\n)
@@ -1839,7 +1840,7 @@ function _regexp_has_newline(r) {
   );
 }
 
-/*
+/**
   Lexer interface
 
     Method Signatures:
@@ -2155,7 +2156,7 @@ class ContextualLexer extends Lexer {
   }
 }
 
-/*
+/**
   A thread that ties a lexer instance and a lexer state, to be used by the parser
 */
 
@@ -2371,7 +2372,7 @@ class _ChildFilter {
 }
 
 const ChildFilter = callable_class(_ChildFilter);
-/*
+/**
   Optimized childfilter for LALR (assumes no duplication in parse tree, so it's safe to change it)
 */
 
@@ -2404,7 +2405,7 @@ class _ChildFilterLALR extends _ChildFilter {
 }
 
 const ChildFilterLALR = callable_class(_ChildFilterLALR);
-/*
+/**
   Optimized childfilter for LALR (assumes no duplication in parse tree, so it's safe to change it)
 */
 
@@ -2487,7 +2488,7 @@ function maybe_create_child_filter(
   }
 }
 
-/*
+/**
   Deal with the case where we're expanding children ('_rule') into a parent but the children
        are ambiguous. i.e. (parent->_ambig->_expand_this_rule). In this case, make the parent itself
        ambiguous with as many copies as their are ambiguous children, and then copy the ambiguous children
@@ -2557,7 +2558,7 @@ function maybe_create_ambiguous_expander(
   }
 }
 
-/*
+/**
   
     Propagate ambiguous intermediate nodes and their derivations up to the
     current rule.
@@ -2611,7 +2612,7 @@ class _AmbiguousIntermediateExpander {
       return "data" in child && child.data === "_iambig";
     }
 
-    /*
+    /**
     
             Recursively flatten the derivations of the parent of an '_iambig'
             node. Returns a list of '_inter' nodes guaranteed not
@@ -3040,7 +3041,7 @@ class _Parser {
 
 // This module provides a LALR interactive parser, which is used for debugging and error handling
 
-/*
+/**
   InteractiveParser gives you advanced control over parsing and error handling when parsing with LALR.
 
     For a simpler interface, see the ``on_error`` argument to ``Lark.parse()``.
@@ -3054,7 +3055,7 @@ class InteractiveParser {
     this.lexer_state = lexer_state;
   }
 
-  /*
+  /**
     Feed the parser with a token, and advance it to the next state, as if it received it from the lexer.
 
         Note that ``token`` has to be an instance of ``Token``.
@@ -3064,7 +3065,7 @@ class InteractiveParser {
     return this.parser_state.feed_token(token, token.type === "$END");
   }
 
-  /*
+  /**
     Try to feed the rest of the lexer state into the interactive parser.
         
         Note that this modifies the instance in place and does not feed an '$END' Token
@@ -3075,7 +3076,7 @@ class InteractiveParser {
     }
   }
 
-  /*
+  /**
     Feed a '$END' Token. Borrows from 'last_token' if given.
   */
   feed_eof(last_token = null) {
@@ -3101,7 +3102,7 @@ class InteractiveParser {
     );
   }
 
-  /*
+  /**
     Convert to an ``ImmutableInteractiveParser``.
   */
   as_immutable() {
@@ -3113,7 +3114,7 @@ class InteractiveParser {
     );
   }
 
-  /*
+  /**
     Print the output of ``choices()`` in a way that's easier to read.
   */
   pretty() {
@@ -3126,7 +3127,7 @@ class InteractiveParser {
     return out.join("\n");
   }
 
-  /*
+  /**
     Returns a dictionary of token types, matched to their action in the parser.
 
         Only returns token types that are accepted by the current state.
@@ -3140,7 +3141,7 @@ class InteractiveParser {
     ];
   }
 
-  /*
+  /**
     Returns the set of possible tokens that will advance the parser into a new valid state.
   */
   accepts() {
@@ -3170,7 +3171,7 @@ class InteractiveParser {
     return accepts;
   }
 
-  /*
+  /**
     Resume automated parsing from the current state.
   */
   resume_parse() {
@@ -3178,7 +3179,7 @@ class InteractiveParser {
   }
 }
 
-/*
+/**
   Same as ``InteractiveParser``, but operations create a new instance instead
     of changing it in-place.
     
@@ -3197,7 +3198,7 @@ class ImmutableInteractiveParser extends InteractiveParser {
     return c;
   }
 
-  /*
+  /**
     Try to feed the rest of the lexer state into the parser.
 
         Note that this returns a new ImmutableInteractiveParser and does not feed an '$END' Token
@@ -3208,7 +3209,7 @@ class ImmutableInteractiveParser extends InteractiveParser {
     return cursor.as_immutable();
   }
 
-  /*
+  /**
     Convert to an ``InteractiveParser``.
   */
   as_mutable() {
@@ -3552,7 +3553,7 @@ var CYK_FrontEnd = NotImplemented;
 // Lark
 //
 
-/*
+/**
   Specifies the options for Lark
 
     
@@ -3747,7 +3748,7 @@ class PostLex extends ABC {
   }
 }
 
-/*
+/**
   Main interface for the library.
 
     It's mostly a thin wrapper for the many different parsers, and for the tree constructor.
@@ -3798,13 +3799,13 @@ class Lark extends Serialize {
     );
   }
 
-  /*
+  /**
     Saves the instance into the given file object
 
         Useful for caching and multiprocessing.
         
   */
-  /*
+  /**
     Loads an instance from the given file object
 
         Useful for caching and multiprocessing.
@@ -3881,7 +3882,7 @@ class Lark extends Serialize {
     });
   }
 
-  /*
+  /**
     Create an instance of Lark with the grammar given by its filename
 
         If ``rel_to`` is provided, the function will find the grammar filename in relation to it.
@@ -3893,7 +3894,7 @@ class Lark extends Serialize {
 
         
   */
-  /*
+  /**
     Create an instance of Lark with the grammar loaded from within the package `package`.
         This allows grammar loading from zipapps.
 
@@ -3913,7 +3914,7 @@ class Lark extends Serialize {
     );
   }
 
-  /*
+  /**
     Only lex (and postlex) the text, without parsing it. Only relevant when lexer='standard'
 
         When dont_ignore=True, the lexer will return all tokens, even those marked for %ignore.
@@ -3935,14 +3936,14 @@ class Lark extends Serialize {
     return stream;
   }
 
-  /*
+  /**
     Get information about a terminal
   */
   get_terminal(name) {
     return this._terminals_dict[name];
   }
 
-  /*
+  /**
     Start an interactive parsing session.
 
         Parameters:
@@ -3962,7 +3963,7 @@ class Lark extends Serialize {
     });
   }
 
-  /*
+  /**
     Parse the given text, according to the options provided.
 
         Parameters:
