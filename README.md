@@ -4,12 +4,9 @@
 
 Lark is a popular parsing toolkit for Python.
 
-This project is a port of the Lark standalone parser to Javascript.
+This project is a live port of the Lark standalone parser to Javascript.
 
 **Lark.js** takes a `.lark` grammar, and from it generates a standalone Javascript parser.
-
-The generated Javascript module will include the parser, and a set of utilities,
-such as `Tree`, `Transformer`, `Visitor` and `InteractiveParser`.
 
 ### Lark grammars
 
@@ -18,6 +15,12 @@ Lark grammars are written in an augmented EBNF (a textual format), and usually u
 Because they are purely declarative, and don't contain code, they are entirely portable between languages.
 
 It is now possible to use Lark grammars in 3 languages: Python, Javascript, and Julia.
+
+### Quick links
+
+- [Online IDE](https://lark-parser.github.io/ide)
+- [Gitter chat](https://gitter.im/lark-parser/Lobby) - A place to ask questions and discuss
+- [Lark](https://https://github.com/lark-parser/lark) - The Python library
 
 ### Install Lark.js
 
@@ -38,12 +41,6 @@ For help, run:
 ```sh
 	lark-js --help
 ```
-
-### Quick links
-
-- [Lark](https://https://github.com/lark-parser/lark) - The Python library
-- [Online IDE](https://lark-parser.github.io/ide)
-- [Gitter chat](https://gitter.im/lark-parser/Lobby) - A place to ask questions and discuss
 
 ## Features
 
@@ -71,13 +68,13 @@ Lark provides syntax highlighting for its grammar files (\*.lark):
 - [Vim](https://github.com/lark-parser/vim-lark-syntax)
 - [Atom](https://github.com/Alhadis/language-grammars)
 
-### Automatic sync with the Python code
+### Live Port
 
-Ports from one language to another are often at risk of falling out of sync as time goes on.
+Usually, ports from one language to another are at risk of falling out of sync as time goes on.
 
-But Lark.js wasn't just written by hand -- it was transpiled directly from Lark's Python code!
+But Lark.js wasn't translated by hand -- 98% of the lines were transpiled directly from Lark's Python code!
 
-That means that futures updates to Lark-Python will be automatically added to Lark.js too. 
+That means that futures updates to Lark-Python (fixes, features, etc.) will automatically sync to Lark.js.
 
 ## License
 
