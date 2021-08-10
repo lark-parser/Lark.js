@@ -722,28 +722,6 @@ function _deserialize(data, namespace, memo) {
 */
 
 class Serialize {
-  memo_serialize(types_to_memoize) {
-    let memo = new SerializeMemoizer(types_to_memoize);
-    return [this.serialize(memo), memo.serialize()];
-  }
-
-  serialize(memo = null) {
-    if (memo && memo.in_types(this)) {
-      return { "@": dict_get(memo.memoized, this) };
-    }
-
-    let fields = this && this["__serialize_fields__"];
-    let res = Object.fromEntries(
-      fields.map((f) => [f, _serialize(this && this[f], memo)])
-    );
-    res["__type__"] = type(this).name;
-    if ("_serialize" in this) {
-      this._serialize(res, memo);
-    }
-
-    return res;
-  }
-
   static deserialize(data, memo) {
     const cls = this;
     let namespace = (cls && cls["__serialize_namespace__"]) || [];
@@ -3785,281 +3763,6 @@ class PostLex extends ABC {
 */
 
 class Lark extends Serialize {
-  constructor({ grammar, ...options } = {}) {
-    super();
-    let cached_parser_data,
-      cached_used_files,
-      file_md5,
-      old_options,
-      options_str,
-      re_module,
-      read,
-      s,
-      terminals_to_keep,
-      unhashable,
-      used_files;
-    this.options = new LarkOptions(options);
-    // Set regex or re module
-    let use_regex = this.options.regex;
-    if (use_regex) {
-      if (regex) {
-        re_module = regex;
-      } else {
-        throw new ImportError(
-          "`regex` module must be installed if calling `Lark(regex=True)`."
-        );
-      }
-    } else {
-      re_module = re;
-    }
-    // Some, but not all file-like objects have a 'name' attribute
-    if (this.options.source_path === null) {
-      if (grammar && grammar.name) {
-        this.source_path = grammar.name;
-      } else {
-        this.source_path = "<string>";
-      }
-    } else {
-      this.source_path = this.options.source_path;
-    }
-    // Drain file-like objects to get their contents
-    if (grammar && grammar.read) {
-      // Drain file-like objects to get their contents
-      read = grammar.read;
-      grammar = read();
-    } else {
-      // pass
-    }
-    let cache_fn = null;
-    let cache_md5 = null;
-    if (typeof grammar === "string") {
-      this.source_grammar = grammar;
-      if (this.options.use_bytes) {
-        if (!isascii(grammar)) {
-          throw new ConfigurationError(
-            "Grammar must be ascii only, when use_bytes=True"
-          );
-        }
-      }
-
-      if (this.options.cache) {
-        if (this.options.parser !== "lalr") {
-          throw new ConfigurationError(
-            "cache only works with parser='lalr' for now"
-          );
-        }
-
-        unhashable = [
-          "transformer",
-          "postlex",
-          "lexer_callbacks",
-          "edit_terminals",
-        ];
-        options_str = dict_items(options)
-          .filter(([k, v]) => !unhashable.includes(k))
-          .map(([k, v]) => k + v.toString())
-          .join("");
-        s =
-          grammar +
-          options_str +
-          __version__ +
-          sys.version_info.slice(2).toString();
-        cache_md5 = hashlib.md5(s.encode("utf8")).hexdigest();
-        if (typeof this.options.cache === "string") {
-          cache_fn = this.options.cache;
-        } else {
-          if (this.options.cache !== true) {
-            throw new ConfigurationError("cache argument must be bool or str");
-          }
-
-          // Python2.7 doesn't support * syntax in tuples
-          cache_fn =
-            tempfile.gettempdir() +
-            format(
-              "/.lark_cache_%s_%s_%s.tmp",
-              [cache_md5] + sys.version_info.slice(2)
-            );
-        }
-        if (FS.exists(cache_fn)) {
-          logger.debug("Loading grammar from cache: %s", cache_fn);
-          // Remove options that aren't relevant for loading from cache
-          for (const name of new Set(options) - _LOAD_ALLOWED_OPTIONS) {
-            dict_pop(options);
-          }
-
-          old_options = this.options;
-          try {
-            file_md5 = f.readline().rstrip("\n");
-            cached_used_files = pickle.load(f);
-            if (
-              file_md5 === cache_md5.encode("utf8") &&
-              verify_used_files(cached_used_files)
-            ) {
-              cached_parser_data = pickle.load(f);
-              this._load({ f: cached_parser_data, ...options });
-              return;
-            }
-          } catch (e) {
-            if (e instanceof Error) {
-              logger.exception(
-                format(
-                  "Failed to load Lark from cache: %r. We will try to carry on.",
-                  cache_fn
-                )
-              );
-              // In theory, the Lark instance might have been messed up by the call to `_load`.
-              // In practice the only relevant thing that might have been overriden should be `options`
-              this.options = old_options;
-            } else {
-              throw e;
-            }
-          }
-        }
-      }
-
-      // Parse the grammar file and compose the grammars
-      [this.grammar, used_files] = load_grammar(
-        grammar,
-        this.source_path,
-        this.options.import_paths,
-        this.options.keep_all_tokens
-      );
-    } else {
-      this.grammar = grammar;
-    }
-    if (this.options.lexer === "auto") {
-      if (this.options.parser === "lalr") {
-        this.options.lexer = "contextual";
-      } else if (this.options.parser === "earley") {
-        if (this.options.postlex !== null) {
-          logger.info(
-            "postlex can't be used with the dynamic lexer, so we use standard instead. " +
-              "Consider using lalr with contextual instead of earley"
-          );
-          this.options.lexer = "standard";
-        } else {
-          this.options.lexer = "dynamic";
-        }
-      } else if (this.options.parser === "cyk") {
-        this.options.lexer = "standard";
-      }
-    }
-
-    let lexer = this.options.lexer;
-    if (typeof lexer === "object") {
-    } else {
-      // XXX Is this really important? Maybe just ensure interface compliance
-      assert_config(lexer, [
-        "standard",
-        "contextual",
-        "dynamic",
-        "dynamic_complete",
-      ]);
-      if (this.options.postlex !== null && lexer.includes("dynamic")) {
-        throw new ConfigurationError(
-          "Can't use postlex with a dynamic lexer. Use standard or contextual instead"
-        );
-      }
-    }
-    if (this.options.ambiguity === "auto") {
-      if (this.options.parser === "earley") {
-        this.options.ambiguity = "resolve";
-      }
-    } else {
-      assert_config(
-        this.options.parser,
-        ["earley", "cyk"],
-        "%r doesn't support disambiguation. Use one of these parsers instead: %s"
-      );
-    }
-    if (this.options.priority === "auto") {
-      this.options.priority = "normal";
-    }
-
-    if (!_VALID_PRIORITY_OPTIONS.includes(this.options.priority)) {
-      throw new ConfigurationError(
-        format(
-          "invalid priority option: %r. Must be one of %r",
-          this.options.priority,
-          _VALID_PRIORITY_OPTIONS
-        )
-      );
-    }
-
-    if (!_VALID_AMBIGUITY_OPTIONS.includes(this.options.ambiguity)) {
-      throw new ConfigurationError(
-        format(
-          "invalid ambiguity option: %r. Must be one of %r",
-          this.options.ambiguity,
-          _VALID_AMBIGUITY_OPTIONS
-        )
-      );
-    }
-
-    if (this.options.postlex !== null) {
-      terminals_to_keep = new Set(this.options.postlex.always_accept);
-    } else {
-      terminals_to_keep = new Set();
-    }
-    // Compile the EBNF grammar into BNF
-    [this.terminals, this.rules, this.ignore_tokens] = this.grammar.compile(
-      this.options.start,
-      terminals_to_keep
-    );
-    if (this.options.edit_terminals) {
-      for (const t of this.terminals) {
-        this.options.edit_terminals(t);
-      }
-    }
-
-    this._terminals_dict = Object.fromEntries(
-      this.terminals.map((t) => [t.name, t])
-    );
-    // If the user asked to invert the priorities, negate them all here.
-    // This replaces the old 'resolve__antiscore_sum' option.
-    if (this.options.priority === "invert") {
-      for (const rule of this.rules) {
-        if (rule.options.priority !== null) {
-          rule.options.priority = -rule.options.priority;
-        }
-      }
-    }
-
-    // Else, if the user asked to disable priorities, strip them from the
-    // rules. This allows the Earley parsers to skip an extra forest walk
-    // for improved performance, if you don't need them (or didn't specify any).
-    else if (this.options.priority === null) {
-      for (const rule of this.rules) {
-        if (rule.options.priority !== null) {
-          rule.options.priority = null;
-        }
-      }
-    }
-
-    // TODO Deprecate lexer_callbacks?
-    this.lexer_conf = new LexerConf({
-      terminals: this.terminals,
-      re_module: re_module,
-      ignore: this.ignore_tokens,
-      postlex: this.options.postlex,
-      callbacks: this.options.lexer_callbacks,
-      g_regex_flags: this.options.g_regex_flags,
-      use_bytes: this.options.use_bytes,
-    });
-    if (this.options.parser) {
-      this.parser = this._build_parser();
-    } else if (lexer) {
-      this.lexer = this._build_lexer();
-    }
-
-    if (cache_fn) {
-      logger.debug("Saving grammar to cache: %s", cache_fn);
-      f.write(cache_md5.encode("utf8") + "\n");
-      pickle.dump(used_files, f);
-      this.save(f);
-    }
-  }
-
   static get __serialize_fields__() {
     return ["parser", "rules", "options"];
   }
@@ -4095,48 +3798,18 @@ class Lark extends Serialize {
     );
   }
 
-  _build_parser() {
-    this._prepare_callbacks();
-    let parser_class = get_frontend(this.options.parser, this.options.lexer);
-    let parser_conf = new ParserConf(
-      this.rules,
-      this._callbacks,
-      this.options.start
-    );
-    return parser_class({
-      unknown_param_0: this.lexer_conf,
-      unknown_param_1: parser_conf,
-      options: this.options,
-    });
-  }
-
   /*
     Saves the instance into the given file object
 
         Useful for caching and multiprocessing.
         
   */
-  save(f) {
-    let [data, m] = this.memo_serialize([TerminalDef, Rule]);
-    pickle.dump({
-      unknown_param_0: { data: data, memo: m },
-      unknown_param_1: f,
-      protocol: pickle.HIGHEST_PROTOCOL,
-    });
-  }
-
   /*
     Loads an instance from the given file object
 
         Useful for caching and multiprocessing.
         
   */
-  static load(f) {
-    const cls = this;
-    let inst = new_object(cls);
-    return inst._load(f);
-  }
-
   _deserialize_lexer_conf(data, memo, options) {
     let lexer_conf = LexerConf.deserialize(data["lexer_conf"], memo);
     lexer_conf.callbacks = options.lexer_callbacks || {};
@@ -4220,17 +3893,6 @@ class Lark extends Serialize {
 
         
   */
-  static open({ grammar_filename, rel_to = null, ...options } = {}) {
-    const cls = this;
-    let basepath;
-    if (rel_to) {
-      basepath = os.path.dirname(rel_to);
-      grammar_filename = os.path.join(basepath, grammar_filename);
-    }
-
-    return new cls({ unknown_param_0: f, ...options });
-  }
-
   /*
     Create an instance of Lark with the grammar loaded from within the package `package`.
         This allows grammar loading from zipapps.
@@ -4242,21 +3904,6 @@ class Lark extends Serialize {
             Lark.open_from_package(__name__, "example.lark", ("grammars",), parser=...)
         
   */
-  static open_from_package({
-    package_,
-    grammar_path,
-    search_paths = [""],
-    ...options
-  } = {}) {
-    const cls = this;
-    let package_loader = new FromPackageLoader(package_, search_paths);
-    let [full_path, text] = package_loader(null, grammar_path);
-    options.setdefault("source_path", full_path);
-    options.setdefault("import_paths", []);
-    options["import_paths"].push(package_loader);
-    return new cls({ unknown_param_0: text, ...options });
-  }
-
   repr() {
     return format(
       "Lark(open(%r), parser=%r, lexer=%r, ...)",
