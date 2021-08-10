@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "Lark-js"
-version = "0.0.3"
+version = "0.0.4"
 description = "An extension to Lark that generates a Javascript standalone"
 authors = ["Erez Shin <erezshin@gmail.com>"]
 license = "MIT"

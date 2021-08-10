@@ -44,9 +44,9 @@ For help, run:
 
 ## Features
 
- - Builds a parse-tree (AST) automagically, based on the structure of the grammar
  - **LALR(1)** parser - Fast and light
  - **EBNF** grammar
+ - Builds a parse-tree (AST) automagically, based on the structure of the grammar
  - Usable in the browser and in Node.js
  - Interactive parsing (step-by-step)
  - Tree utilities (including transformers & visitors)

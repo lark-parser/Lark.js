@@ -905,7 +905,7 @@ class Tree {
     let queue = [this];
     let subtrees = new Map();
     for (const subtree of queue) {
-      subtrees[subtree] = subtree;
+      subtrees.set(subtree, subtree);
       queue.push(
         ...[...subtree.children]
           .reverse()
@@ -915,7 +915,7 @@ class Tree {
     }
 
     queue = undefined;
-    return [...dict_values(subtrees)].reverse();
+    return [...subtrees.values()].reverse();
   }
 
   /*
