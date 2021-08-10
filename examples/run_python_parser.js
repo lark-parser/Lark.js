@@ -30,7 +30,6 @@ class PythonIndenter extends Indenter {
 
 const parser = get_parser({postlex: new PythonIndenter()})
 
-
 function test_python_lib(base_dir) {
     const fs = require('fs');
     const files = fs.readdirSync(base_dir);

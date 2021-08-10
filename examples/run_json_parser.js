@@ -6,7 +6,7 @@
 //
 //      node run_json_parser.js
 
-var {get_parser} = require('./json_parser.js')
+const {get_parser} = require('./json_parser.js')
 
 let transformer = {
     number: ([n])  => parseFloat(n.value),
@@ -20,11 +20,10 @@ let transformer = {
     false: () => false,
 }
 
-var parser = get_parser({transformer})
-
+const parser = get_parser({transformer})
 
 function test_json() {
-    let text = `
+    const text = `
     {
         "empty_object" : {},
         "empty_array"  : [],
@@ -34,13 +33,9 @@ function test_json() {
         "nothing"      : null
     }
     `
-
     console.log( parser.parse(text) )
-
 }
-
 
 if (require && require.main === module) {
     test_json()
 }
-
