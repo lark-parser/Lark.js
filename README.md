@@ -6,18 +6,18 @@ Lark is a popular parsing toolkit for Python.
 
 This project is a port of the Lark standalone parser to Javascript.
 
-Lark.js takes a `.lark` grammar, and from it generates a standalone Javascript parser.
+**Lark.js** takes a `.lark` grammar, and from it generates a standalone Javascript parser.
 
-The generated Javascript module will include Lark's base classes and utilities, 
+The generated Javascript module will include the parser, and a set of utilities,
 such as `Tree`, `Transformer`, `Visitor` and `InteractiveParser`.
 
-**Lark grammars**
+### Lark grammars
 
 Lark grammars are written in an augmented EBNF (a textual format), and usually use the `.lark` extension.
 
 Because they are purely declarative, and don't contain code, they are entirely portable between languages.
 
-It is now possible to use Lark grammars in 3 languages: Python, Javascript and Julia.
+It is now possible to use Lark grammars in 3 languages: Python, Javascript, and Julia.
 
 ### Install Lark.js
 
@@ -51,6 +51,8 @@ For help, run:
  - **LALR(1)** parser - Fast and light
  - **EBNF** grammar
  - Usable in the browser and in Node.js
+ - Interactive parsing (step-by-step)
+ - Tree utilities (including transformers & visitors)
  - Line & column tracking
  - Standard library of terminals (strings, numbers, names, etc.)
  - Import grammars from Nearley.js

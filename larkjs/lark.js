@@ -33,6 +33,7 @@ function get_parser(options = {}) {
 
 const NO_VALUE = {};
 class _Decoratable {}
+
 //
 //   Implementation of Scanner + module emulation for Python's stdlib re
 // -------------------------------------------------------------------------
@@ -4414,11 +4415,9 @@ class Indenter extends PostLex {
     return [this.NL_type];
   }
 }
-
 module.exports = {
   LarkError,
   ConfigurationError,
-  assert_config,
   GrammarError,
   ParseError,
   LexError,
@@ -4427,9 +4426,6 @@ module.exports = {
   UnexpectedCharacters,
   UnexpectedToken,
   VisitError,
-  classify,
-  Serialize,
-  SerializeMemoizer,
   Meta,
   Tree,
   Discard,
@@ -4451,36 +4447,11 @@ module.exports = {
   PatternRE,
   TerminalDef,
   Token,
-  LineCounter,
   Lexer,
-  TraditionalLexer,
-  LexerState,
-  ContextualLexer,
-  LexerThread,
   LexerConf,
   ParserConf,
-  make_propagate_positions,
-  maybe_create_child_filter,
-  maybe_create_ambiguous_expander,
-  inplace_transformer,
-  apply_visit_wrapper,
-  ParseTreeBuilder,
-  LALR_Parser,
-  ParseConf,
-  ParserState,
   InteractiveParser,
   ImmutableInteractiveParser,
-  Action,
-  ParseTable,
-  IntParseTable,
-  MakeParsingFrontend,
-  ParsingFrontend,
-  get_frontend,
-  PostLexConnector,
-  create_traditional_lexer,
-  create_contextual_lexer,
-  create_lalr_parser,
-  LarkOptions,
   PostLex,
   Lark,
   DedentError,
