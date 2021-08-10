@@ -1,0 +1,13 @@
+{
+  "name": "Lark.js",
+  "description": "live port of the Lark standalone parser to Javascript",
+  "version": "0.0.4",
+  "scripts": {
+    "test": "mocha"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "lodash": "^4.17.21",
+    "mocha": "^9.0.3"
+  }
+}

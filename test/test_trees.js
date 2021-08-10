@@ -1,5 +1,6 @@
 const _ = require("lodash");
 const lark = require("../larkjs/lark.js");
+const assert = require('assert');
 
 const {
   Tree,
@@ -22,7 +23,7 @@ const {
 
 class TestCase {
   assertEqual(a, b) {
-    console.assert(_.isEqual(a, b), "Not equal:", a, b);
+    assert(_.isEqual(a, b), "Not equal:", a, b);
   }
 }
 
@@ -213,16 +214,3 @@ class TestTrees extends TestCase {
 }
 
 module.exports = { TestTrees };
-
-function run_test_class(cls) {
-  test = new cls();
-  test.setUp();
-  for (const name of Object.getOwnPropertyNames(cls.prototype).filter((prop) =>
-    prop.startsWith("test_")
-  )) {
-    console.log("Test:", name);
-    test[name]();
-  }
-}
-
-run_test_class(TestTrees);
