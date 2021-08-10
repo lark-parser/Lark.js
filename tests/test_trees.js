@@ -1,12 +1,20 @@
-const _ = require('lodash')
-const lark = require('../larkjs/lark.js')
+const _ = require("lodash");
+const lark = require("../larkjs/lark.js");
 
 const {
-  Tree, Token,
-  Visitor, Visitor_Recursive, Transformer, Interpreter, visit_children_decor, v_args, Discard, Transformer_InPlace,
-  Transformer_InPlaceRecursive, Transformer_NonRecursive
-} = lark
-
+  Tree,
+  Token,
+  Visitor,
+  Visitor_Recursive,
+  Transformer,
+  Interpreter,
+  visit_children_decor,
+  v_args,
+  Discard,
+  Transformer_InPlace,
+  Transformer_InPlaceRecursive,
+  Transformer_NonRecursive,
+} = lark;
 
 //
 // Test Trees
@@ -14,11 +22,9 @@ const {
 
 class TestCase {
   assertEqual(a, b) {
-    console.assert(_.isEqual(a, b), 'Not equal:', a, b)
+    console.assert(_.isEqual(a, b), "Not equal:", a, b);
   }
-
 }
-
 
 class TestTrees extends TestCase {
   setUp() {
@@ -167,9 +173,9 @@ class TestTrees extends TestCase {
       new Tree("c", []),
       new Tree("b", []),
     ]);
-    const tn = new Tree("c", [])
+    const tn = new Tree("c", []);
     let t2 = new Tree("root", [1, tn]);
-    tn.meta, t2.meta   // create meta nodes for isEqual (to match those created by the transformer)
+    tn.meta, t2.meta; // create meta nodes for isEqual (to match those created by the transformer)
 
     let x = new MyTransformer().transform(t);
     this.assertEqual(x, t2);
@@ -199,8 +205,8 @@ class TestTrees extends TestCase {
 
       copied = _.cloneDeep(tree);
       result = new T().transform(copied);
-      const t = new Tree("start", [3, 7])
-      t.meta  // create meta for isEqual
+      const t = new Tree("start", [3, 7]);
+      t.meta; // create meta for isEqual
       this.assertEqual(result, t);
     }
   }
@@ -208,16 +214,15 @@ class TestTrees extends TestCase {
 
 module.exports = { TestTrees };
 
-
 function run_test_class(cls) {
-
-  test = new cls()
-  test.setUp()
-  for (const name of Object.getOwnPropertyNames(cls.prototype).filter(prop => prop.startsWith("test_"))) {
-    console.log("Test:", name)
-    test[name]()
+  test = new cls();
+  test.setUp();
+  for (const name of Object.getOwnPropertyNames(cls.prototype).filter((prop) =>
+    prop.startsWith("test_")
+  )) {
+    console.log("Test:", name);
+    test[name]();
   }
 }
 
-
-run_test_class(TestTrees)
+run_test_class(TestTrees);
