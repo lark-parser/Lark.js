@@ -11,27 +11,41 @@ such as `Tree`, `Transformer`, `Visitor` and `InteractiveParser`.
 
 Currently, only LALR(1) is supported. (Earley support is planned!)
 
-### Quick links
-
-- [Lark (Python)](https://https://github.com/lark-parser/lark)
-- [Online IDE](https://lark-parser.github.io/ide)
-- [Gitter chat](https://gitter.im/lark-parser/Lobby)
-
 ### Install Lark.js
 
-    $ pip install lark-js --upgrade
+Install lark-js on Python:
+
+```sh
+    pip install lark-js --upgrade
+```
 
 ### Generate a Javascript LALR(1) parser
 
-```bash
+```sh
 	lark-js my_grammar.lark -o my_parser.js
 ```
 
 For help, run:
 
-```bash
+```sh
 	lark-js --help
 ```
+
+### Quick links
+
+- [Lark](https://https://github.com/lark-parser/lark) - The Python library
+- [Online IDE](https://lark-parser.github.io/ide)
+- [Gitter chat](https://gitter.im/lark-parser/Lobby) - A place to ask questions and discuss
+
+## Features
+
+ - Builds a parse-tree (AST) automagically, based on the structure of the grammar
+ - **LALR(1)** parser - Fast and light
+ - **EBNF** grammar
+ - Usable in the browser and in Node.js
+ - Line & column tracking
+ - Standard library of terminals (strings, numbers, names, etc.)
+ - Import grammars from Nearley.js
 
 ### Syntax Highlighting
 
@@ -43,19 +57,7 @@ Lark provides syntax highlighting for its grammar files (\*.lark):
 - [Vim](https://github.com/lark-parser/vim-lark-syntax)
 - [Atom](https://github.com/Alhadis/language-grammars)
 
-
-## List of main features
-
- - Builds a parse-tree (AST) automagically, based on the structure of the grammar
- - **LALR(1)** parser - Fast and light
- - **EBNF** grammar
- - Usable in the browser and in Node
- - Automatic line & column tracking
- - Standard library of terminals (strings, numbers, names, etc.)
- - Import grammars from Nearley.js ([read more](/docs/tools.md#importing-grammars-from-nearleyjs))
- - And much more!
-
-### Sync with the Python code
+### Automatic sync with the Python code
 
 Ports from one language to another are often at risk of falling out of sync as time goes on.
 
