@@ -1,0 +1,69 @@
+{
+    "plugins": ["plugins/markdown", "node_modules/jsdoc-autoprivate/autoprivate.js"
+],
+    "recurseDepth": 10,
+    "source": {
+        "include": ["larkjs"],
+        "includePattern": ".+\\.js(doc|x)?$",
+        "excludePattern": "(^|\\/|\\\\)_"
+    },
+    "sourceType": "module",
+    "tags": {
+        "allowUnknownTags": true,
+        "dictionaries": ["jsdoc","closure"]
+    },
+    "templates": {
+        "cleverLinks": false,
+        "monospaceLinks": false
+    },
+    "opts": {
+      "template": "node_modules/docdash",
+      "readme": "README.md"
+    },
+       "docdash": {
+        "static": true,         // Display the static members inside the navbar
+        "sort": true,           // Sort the methods in the navbar
+        "sectionOrder": [               // Order the main section in the navbar (default order shown here)
+             "Modules",
+             "Externals",
+             "Events",
+             "Namespaces",
+             "Mixins",
+             "Tutorials",
+             "Interfaces",
+             "Classes"
+        ], 
+        "openGraph": {                  // Open Graph options (mostly for Facebook and other sites to easily extract meta information)
+            "title": "",                // Title of the website
+            "type": "website",          // Type of the website
+            "image": "",                // Main image/logo
+            "site_name": "",            // Site name
+            "url": ""                   // Main canonical URL for the main page of the site
+        },
+        "meta": {                       // Meta information options (mostly for search engines that have not indexed your site yet)
+            "title": "",                // Also will be used as postfix to actualy page title, prefixed with object/document name
+            "description": "",          // Description of overal contents of your website
+            "keyword": ""               // Keywords for search engines
+        },
+        "search": true,         // Display seach box above navigation which allows to search/filter navigation items
+        "commonNav": true,
+        "collapse": false,       // Collapse navigation by default except current object's navigation of the current page
+        "wrap": true,           // Wrap long navigation names instead of trimming them
+        "private": false,        // set to false to not show @private in navbar
+        "removeQuotes": "all", // Remove single and double quotes, trim removes only surrounding ones
+        "menu": {                       // Adding additional menu items after Home
+            "Github homepage": {        // Menu item name
+                "href":"https://github.com/lark-parser/Lark.js", //the rest of HTML properties to add to manu item
+                "target":"_blank",
+                "class":"menu-item",
+                "id":"website_link"
+            },
+            "Chat (gitter)": {
+                "href":"https://gitter.im/lark-parser/Lobby",
+                "target":"_blank",
+                "class":"menu-item",
+                "id":"forum_link"
+            }
+        }
+    } 
+}
