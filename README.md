@@ -19,6 +19,7 @@ It is now possible to use Lark grammars in 3 languages: Python, Javascript, and 
 ### Quick links
 
 - [Documentation](https://lark-parser.github.io/Lark.js/index.html)
+- [Examples](https://github.com/lark-parser/Lark.js/tree/master/examples)
 - [Online IDE](https://lark-parser.github.io/ide)
 - [Gitter chat](https://gitter.im/lark-parser/Lobby) - A place to ask questions and discuss
 - [Lark](https://https://github.com/lark-parser/lark) - The Python library
