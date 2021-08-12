@@ -51,6 +51,7 @@ For help, run:
  - Builds a parse-tree (AST) automagically, based on the structure of the grammar
  - Usable in the browser and in Node.js
  - Interactive parsing (step-by-step)
+ - Error handling
  - Tree utilities (including transformers & visitors)
  - Line & column tracking
  - Standard library of terminals (strings, numbers, names, etc.)

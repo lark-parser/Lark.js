@@ -395,18 +395,6 @@ class LexError extends LarkError {
 */
 
 class UnexpectedInput extends LarkError {
-  static get pos_in_stream() {
-    return null;
-  }
-  get pos_in_stream() {
-    return this.constructor.pos_in_stream;
-  }
-  static get _terminals_by_name() {
-    return null;
-  }
-  get _terminals_by_name() {
-    return this.constructor._terminals_by_name;
-  }
   /**
     Returns a pretty string pinpointing the error in the text,
         with span amount of context characters around it.
@@ -556,7 +544,7 @@ class UnexpectedInput extends LarkError {
   }
 }
 
-class UnexpectedEOF extends ParseError {
+class UnexpectedEOF extends UnexpectedInput {
   constructor(expected, state = null, terminals_by_name = null) {
     super();
     this.expected = expected;
@@ -570,7 +558,7 @@ class UnexpectedEOF extends ParseError {
   }
 }
 
-class UnexpectedCharacters extends LexError {
+class UnexpectedCharacters extends UnexpectedInput {
   constructor({
     seq,
     lex_pos,
@@ -610,7 +598,7 @@ class UnexpectedCharacters extends LexError {
     
 */
 
-class UnexpectedToken extends ParseError {
+class UnexpectedToken extends UnexpectedInput {
   constructor({
     token,
     expected,
@@ -2834,9 +2822,8 @@ class LALR_Parser extends Serialize {
 
           try {
             return e.interactive_parser.resume_parse();
-          } catch (e) {
-            if (e instanceof UnexpectedToken) {
-              e2 = e;
+          } catch (e2) {
+            if (e2 instanceof UnexpectedToken) {
               if (
                 e instanceof UnexpectedToken &&
                 e.token.type === e2.token.type &&
@@ -2848,11 +2835,10 @@ class LALR_Parser extends Serialize {
               }
 
               e = e2;
-            } else if (e instanceof UnexpectedCharacters) {
-              e2 = e;
+            } else if (e2 instanceof UnexpectedCharacters) {
               e = e2;
             } else {
-              throw e;
+              throw e2;
             }
           }
         }
