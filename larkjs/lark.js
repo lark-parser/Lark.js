@@ -449,7 +449,6 @@ class UnexpectedInput extends LarkError {
     parse_fn,
     examples,
     token_type_match_fallback = false,
-    use_accepts = false
   ) {
     if (is_dict(examples)) {
       examples = dict_items(examples);
@@ -460,42 +459,11 @@ class UnexpectedInput extends LarkError {
       for (const [j, malformed] of enumerate(example)) {
         try {
           parse_fn(malformed);
-        } catch (e) {
-          if (e instanceof UnexpectedInput) {
-            ut = e;
-            if (ut.state === this.state) {
-              if (
-                use_accepts &&
-                "accepts" in this &&
-                ut.accepts !== this.accepts
-              ) {
-                logger.debug(
-                  format(
-                    "Different accepts with same state[%d]: %s != %s at example [%s][%s]",
-                    this.state,
-                    this.accepts,
-                    ut.accepts,
-                    i,
-                    j
-                  )
-                );
-                continue;
-              }
+        } catch (ut) {
+          if (ut instanceof UnexpectedInput) {
+            if (ut.state.eq(this.state)) {
 
-              if (
-                logger &&
-                this &&
-                ut &&
-                this.token &&
-                ut.token &&
-                logger.debug &&
-                this.token &&
-                ut.token &&
-                this.token.type &&
-                ut.token.type
-              ) {
                 if (ut.token === this.token) {
-                  logger.debug(format("Exact Match at example [%s][%s]", i, j));
                   return label;
                 }
 
@@ -505,24 +473,16 @@ class UnexpectedInput extends LarkError {
                     ut.token.type === this.token.type &&
                     !last_item(candidate)
                   ) {
-                    logger.debug(
-                      format("Token Type Fallback at example [%s][%s]", i, j)
-                    );
                     candidate = [label, true];
                   }
                 }
-              } else {
-                // pass
-              }
+
               if (candidate[0] === null) {
-                logger.debug(
-                  format("Same State match at example [%s][%s]", i, j)
-                );
                 candidate = [label, false];
               }
             }
           } else {
-            throw e;
+            throw ut;
           }
         }
       }
