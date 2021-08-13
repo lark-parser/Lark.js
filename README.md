@@ -18,6 +18,24 @@ Because they are purely declarative, and don't contain code, they are entirely p
 
 It is now possible to use Lark grammars in 3 languages: Python, Javascript, and Julia.
 
+#### "Hello World" Grammar
+
+The following Lark grammar will match the string "Hello, World!" --
+
+```lark
+// A bunch of words
+start: word+                
+
+// Allow optional punctuation after each word
+word: WORD ["," | "!"]
+
+// imports WORD from library
+%import common.WORD   
+
+// Disregard spaces in text
+%ignore " "           
+```
+
 ### Quick links
 
 - [Documentation](https://lark-parser.github.io/Lark.js/index.html)
