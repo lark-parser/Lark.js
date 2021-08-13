@@ -8,6 +8,8 @@ This project is a live port of the Lark standalone parser to Javascript.
 
 **Lark.js** takes a `.lark` grammar, and from it generates a standalone Javascript parser.
 
+The LALR(1) algorithm guarantees O(n) running time (proportional to input length), and minimal memory consumption.
+
 ### Lark grammars
 
 Lark grammars are written in an augmented EBNF (a textual format), and usually use the `.lark` extension.
