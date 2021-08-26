@@ -1290,7 +1290,7 @@ class Interpreter extends _Decoratable {
 // Grammar
 //
 
-class Symbol extends Serialize {
+class GrammarSymbol extends Serialize {
   static get is_term() {
     return NotImplemented;
   }
@@ -1318,7 +1318,7 @@ class Symbol extends Serialize {
   }
 }
 
-class Terminal extends Symbol {
+class Terminal extends GrammarSymbol {
   static get __serialize_fields__() {
     return ["name", "filter_out"];
   }
@@ -1339,7 +1339,7 @@ class Terminal extends Symbol {
   }
 }
 
-class NonTerminal extends Symbol {
+class NonTerminal extends GrammarSymbol {
   static get __serialize_fields__() {
     return ["name"];
   }
@@ -4030,7 +4030,7 @@ module.exports = {
   Visitor,
   Visitor_Recursive,
   Interpreter,
-  Symbol,
+  GrammarSymbol,
   Terminal,
   NonTerminal,
   RuleOptions,
