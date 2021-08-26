@@ -1290,7 +1290,7 @@ class Interpreter extends _Decoratable {
 // Grammar
 //
 
-class Symbol extends Serialize {
+class GrammarSymbol extends Serialize {
   static get is_term() {
     return NotImplemented;
   }
@@ -1318,7 +1318,7 @@ class Symbol extends Serialize {
   }
 }
 
-class Terminal extends Symbol {
+class Terminal extends GrammarSymbol {
   static get __serialize_fields__() {
     return ["name", "filter_out"];
   }
@@ -1339,7 +1339,7 @@ class Terminal extends Symbol {
   }
 }
 
-class NonTerminal extends Symbol {
+class NonTerminal extends GrammarSymbol {
   static get __serialize_fields__() {
     return ["name"];
   }
@@ -3230,13 +3230,12 @@ class ParseTable {
 class IntParseTable extends ParseTable {
   static from_ParseTable(parse_table) {
     const cls = this;
-    let la;
     let enum_ = [...parse_table.states];
     let state_to_idx = Object.fromEntries(
       enumerate(enum_).map(([i, s]) => [s, i])
     );
     let int_states = {};
-    for (const [s, la] of dict_items(parse_table.states)) {
+    for (let [s, la] of dict_items(parse_table.states)) {
       la = Object.fromEntries(
         dict_items(la).map(([k, v]) => [
           k,
@@ -4031,7 +4030,7 @@ module.exports = {
   Visitor,
   Visitor_Recursive,
   Interpreter,
-  Symbol,
+  GrammarSymbol,
   Terminal,
   NonTerminal,
   RuleOptions,
