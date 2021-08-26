@@ -3230,13 +3230,12 @@ class ParseTable {
 class IntParseTable extends ParseTable {
   static from_ParseTable(parse_table) {
     const cls = this;
-    let la;
     let enum_ = [...parse_table.states];
     let state_to_idx = Object.fromEntries(
       enumerate(enum_).map(([i, s]) => [s, i])
     );
     let int_states = {};
-    for (const [s, la] of dict_items(parse_table.states)) {
+    for (let [s, la] of dict_items(parse_table.states)) {
       la = Object.fromEntries(
         dict_items(la).map(([k, v]) => [
           k,
