@@ -50,13 +50,30 @@ for f in flags:
         lalr_argparser.add_argument('--' + f, action='store_true')
 
 
+def generate_js_standalone(lark_inst):
+    """Returns a string containing the Javascript standalone parser, for the given Lark instance
+
+    """
+    if lark_inst.options.parser != 'lalr':
+        raise NotImplementedError("Lark.js only works with LALR parsers for now")
+
+    data, memo = lark_inst.memo_serialize([TerminalDef, Rule])
+    data_json = json.dumps(data, indent=2)
+    memo_json = json.dumps(memo, indent=2)
+
+    with open(__dir__ / 'lark.js') as lark_js:
+        output = lark_js.read()
+        output += '\nvar DATA=%s;\n' % data_json
+        output += '\nvar MEMO=%s;\n' % memo_json
+    return output
+
+
 def build_lalr(namespace):
     logger.setLevel((ERROR, WARN, INFO, DEBUG)[min(namespace.verbose, 3)])
     if len(namespace.start) == 0:
         namespace.start.append('start')
     kwargs = {n: getattr(namespace, n) for n in options}
     return Lark(namespace.grammar_file, parser='lalr', **kwargs), namespace.out
-
 
 
 def main():
@@ -70,14 +87,7 @@ def main():
 
     lark_inst, out = build_lalr(ns)
 
-    data, memo = lark_inst.memo_serialize([TerminalDef, Rule])
-    data_json = json.dumps(data, indent=2)
-    memo_json = json.dumps(memo, indent=2)
-
-    with open(__dir__ / 'lark.js') as lark_js:
-        output = lark_js.read()
-        output += '\nvar DATA=%s;\n' % data_json
-        output += '\nvar MEMO=%s;\n' % memo_json
+    output = generate_js_standalone(lark_inst)
 
     out.write(output)
 
