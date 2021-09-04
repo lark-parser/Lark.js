@@ -35,6 +35,9 @@ function get_parser(options = {}) {
 const NO_VALUE = {};
 class _Decoratable {}
 
+class NotImplementedError extends Error {}
+class KeyError extends Error {}
+
 //
 //   Implementation of Scanner + module emulation for Python's stdlib re
 // -------------------------------------------------------------------------
@@ -50,6 +53,7 @@ const re = {
   },
   error: SyntaxError,
 };
+const regex = re;
 
 function _get_match(re_, regexp, s, flags) {
   const m = re_.compile(regexp, flags).exec(s);
@@ -160,7 +164,7 @@ function range(start, end) {
     end = start;
     start = 0;
   }
-  res = [];
+  const res = [];
   for (let i = start; i < end; i++) res.push(i);
   return res;
 }
@@ -407,23 +411,12 @@ class UnexpectedInput extends LarkError {
   get_context(text, span = 40) {
     let after, before;
     let pos = this.pos_in_stream;
-    let start = max(pos - span, 0);
+    let start = Math.max(pos - span, 0);
     let end = pos + span;
-    if (!(text instanceof bytes)) {
-      before = last_item(rsplit(text.slice(start, pos), "\n", 1));
-      after = text.slice(pos, end).split("\n", 1)[0];
-      return before + after + "\n" + " " * before.expandtabs().length + "^\n";
-    } else {
-      before = last_item(rsplit(text.slice(start, pos), "\n", 1));
-      after = text.slice(pos, end).split("\n", 1)[0];
-      return (
-        before +
-        after +
-        "\n" +
-        " " * before.expandtabs().length +
-        "^\n"
-      ).decode("ascii", "backslashreplace");
-    }
+    before = last_item(rsplit(text.slice(start, pos), "\n", 1));
+    after = text.slice(pos, end).split("\n", 1)[0];
+    const indent = " ".repeat(before.length)
+    return before + after + "\n" + indent + "^\n";
   }
 
   /**
@@ -685,7 +678,7 @@ class Serialize {
       if (data && f in data) {
         inst[f] = _deserialize(data[f], namespace, memo);
       } else {
-        throw new KeyError("Cannot find key for class", cls, e);
+        throw new KeyError("Cannot find key for class", cls, data);
       }
     }
 
@@ -705,18 +698,9 @@ class SerializeMemoizer extends Serialize {
   static get __serialize_fields__() {
     return ["memoized"];
   }
-  constructor(types_to_memoize) {
-    super();
-    this.types_to_memoize = tuple(types_to_memoize);
-    this.memoized = new Enumerator();
-  }
 
   in_types(value) {
     return value instanceof this.types_to_memoize;
-  }
-
-  serialize() {
-    return _serialize(this.memoized.reversed(), null);
   }
 
   static deserialize(data, namespace, memo) {
@@ -905,7 +889,7 @@ class Tree {
   }
 
   copy() {
-    return type(this)(this.data, this.children);
+    return new this.constructor(this.data, this.children);
   }
 
   set(data, children) {
@@ -1178,9 +1162,6 @@ class VisitorBase {
     return tree;
   }
 
-  __class_getitem__(_) {
-    return cls;
-  }
 }
 
 /**
@@ -1307,15 +1288,9 @@ class GrammarSymbol extends Serialize {
   }
 
   repr() {
-    return format("%s(%r)", type(this).name, this.name);
+    return format("%s(%r)", this.constructor.name, this.name);
   }
 
-  static get fullrepr() {
-    return property(__repr__);
-  }
-  get fullrepr() {
-    return this.constructor.fullrepr;
-  }
 }
 
 class Terminal extends GrammarSymbol {
@@ -1335,7 +1310,7 @@ class Terminal extends GrammarSymbol {
   }
 
   get fullrepr() {
-    return format("%s(%r, %r)", type(this).name, this.name, this.filter_out);
+    return format("%s(%r, %r)", this.constructor.name, this.name, this.filter_out);
   }
 }
 
@@ -1461,13 +1436,9 @@ class Pattern extends Serialize {
     this.raw = raw;
   }
 
-  repr() {
-    return repr(this.to_regexp());
-  }
-
   eq(other) {
     return (
-      type(this) === type(other) &&
+      this.constructor === other.constructor &&
       this.value === other.value &&
       this.flags === other.flags
     );
@@ -1532,7 +1503,7 @@ class PatternRE extends Pattern {
 
   _get_width() {
     if (this._width === null) {
-      this._width = get_regexp_width(this.to_regexp());
+      throw ConfigurationError("Pattern width information missing")
     }
 
     return this._width;
@@ -1562,7 +1533,7 @@ class TerminalDef extends Serialize {
   }
 
   repr() {
-    return format("%s(%r, %r)", type(this).name, this.name, this.pattern);
+    return format("%s(%r, %r)", this.constructor.name, this.name, this.pattern);
   }
 
   user_repr() {
@@ -1648,12 +1619,9 @@ class Token {
       return false;
     }
 
-    return str.__eq__(this, other);
+    return this.value === other.value;
   }
 
-  static get __hash__() {
-    return str.__hash__;
-  }
 }
 
 class LineCounter {
@@ -2393,7 +2361,6 @@ function _should_expand(sym) {
 function maybe_create_child_filter(
   expansion,
   keep_all_tokens,
-  ambiguous,
   _empty_indices
 ) {
   let empty_indices, s;
@@ -2420,9 +2387,9 @@ function maybe_create_child_filter(
     to_include.length < expansion.length ||
     any(to_include.map(([i, to_expand, _]) => to_expand))
   ) {
-    if ((_empty_indices.length || ambiguous).length) {
+    if (_empty_indices.length) {
       return partial(
-        ambiguous ? ChildFilter : ChildFilterLALR,
+        ChildFilterLALR,
         to_include,
         nones_to_add
       );
@@ -2443,196 +2410,19 @@ function maybe_create_child_filter(
        into the right parents in the right places, essentially shifting the ambiguity up the tree.
 */
 
-class _AmbiguousExpander {
-  constructor(to_expand, tree_class, node_builder) {
-    this.node_builder = node_builder;
-    this.tree_class = tree_class;
-    this.to_expand = to_expand;
-  }
 
-  __call__(children) {
-    let to_expand;
-    function _is_ambig_tree(t) {
-      return "data" in t && t.data === "_ambig";
-    }
-
-    // -- When we're repeatedly expanding ambiguities we can end up with nested ambiguities.
-    //    All children of an _ambig node should be a derivation of that ambig node, hence
-    //    it is safe to assume that if we see an _ambig node nested within an ambig node
-    //    it is safe to simply expand it into the parent _ambig node as an alternative derivation.
-    let ambiguous = [];
-    for (const [i, child] of enumerate(children)) {
-      if (_is_ambig_tree(child)) {
-        if (i in this.to_expand) {
-          ambiguous.push(i);
-        }
-
-        to_expand = enumerate(child.children)
-          .filter(([j, grandchild]) => _is_ambig_tree(grandchild))
-          .map(([j, grandchild]) => j);
-        child.expand_kids_by_index(...to_expand);
-      }
-    }
-
-    if (!ambiguous) {
-      return this.node_builder(children);
-    }
-
-    let expand = enumerate(children).map(([i, child]) =>
-      ambiguous.includes(i) ? iter(child.children) : repeat(child)
-    );
-    return this.tree_class(
-      "_ambig",
-      product(zip(...expand)).map((f) => this.node_builder([...f[0]]))
-    );
-  }
-}
-
-const AmbiguousExpander = callable_class(_AmbiguousExpander);
-function maybe_create_ambiguous_expander(
-  tree_class,
-  expansion,
-  keep_all_tokens
-) {
-  let to_expand = enumerate(expansion)
-    .filter(
-      ([i, sym]) =>
-        keep_all_tokens ||
-        (!(sym.is_term && sym.filter_out) && _should_expand(sym))
-    )
-    .map(([i, sym]) => i);
-  if (to_expand.length) {
-    return partial(AmbiguousExpander, to_expand, tree_class);
-  }
-}
-
-/**
-  
-    Propagate ambiguous intermediate nodes and their derivations up to the
-    current rule.
-
-    In general, converts
-
-    rule
-      _iambig
-        _inter
-          someChildren1
-          ...
-        _inter
-          someChildren2
-          ...
-      someChildren3
-      ...
-
-    to
-
-    _ambig
-      rule
-        someChildren1
-        ...
-        someChildren3
-        ...
-      rule
-        someChildren2
-        ...
-        someChildren3
-        ...
-      rule
-        childrenFromNestedIambigs
-        ...
-        someChildren3
-        ...
-      ...
-
-    propagating up any nested '_iambig' nodes along the way.
-    
-*/
-
-class _AmbiguousIntermediateExpander {
-  constructor(tree_class, node_builder) {
-    this.node_builder = node_builder;
-    this.tree_class = tree_class;
-  }
-
-  __call__(children) {
-    let iambig_node, new_tree, processed_nodes, result;
-    function _is_iambig_tree(child) {
-      return "data" in child && child.data === "_iambig";
-    }
-
-    /**
-    
-            Recursively flatten the derivations of the parent of an '_iambig'
-            node. Returns a list of '_inter' nodes guaranteed not
-            to contain any nested '_iambig' nodes, or None if children does
-            not contain an '_iambig' node.
-            
-  */
-    function _collapse_iambig(children) {
-      let collapsed, iambig_node, new_tree, result;
-      // Due to the structure of the SPPF,
-      // an '_iambig' node can only appear as the first child
-      if (children && _is_iambig_tree(children[0])) {
-        iambig_node = children[0];
-        result = [];
-        for (const grandchild of iambig_node.children) {
-          collapsed = _collapse_iambig(grandchild.children);
-          if (collapsed) {
-            for (const child of collapsed) {
-              child.children += children.slice(1);
-            }
-
-            result.push(...collapsed);
-          } else {
-            new_tree = this.tree_class(
-              "_inter",
-              grandchild.children + children.slice(1)
-            );
-            result.push(new_tree);
-          }
-        }
-
-        return result;
-      }
-    }
-
-    let collapsed = _collapse_iambig(children);
-    if (collapsed) {
-      processed_nodes = collapsed.map((c) => this.node_builder(c.children));
-      return this.tree_class("_ambig", processed_nodes);
-    }
-
-    return this.node_builder(children);
-  }
-}
-
-const AmbiguousIntermediateExpander = callable_class(
-  _AmbiguousIntermediateExpander
-);
 function inplace_transformer(func) {
-  function f(children) {
+  return function (children) {
     // function name in a Transformer is a rule name.
     let tree = new Tree(func.name, children);
     return func(tree);
   }
-
-  f = wraps(func)(f);
-  return f;
 }
 
 function apply_visit_wrapper(func, name, wrapper) {
-  if (wrapper === _vargs_meta || wrapper === _vargs_meta_inline) {
-    throw new NotImplementedError(
-      "Meta args not supported for internal transformer"
-    );
-  }
-
-  function f(children) {
+  return function (children) {
     return wrapper(func, name, children, null);
   }
-
-  f = wraps(func)(f);
-  return f;
 }
 
 class ParseTreeBuilder {
@@ -2643,9 +2433,12 @@ class ParseTreeBuilder {
     ambiguous = false,
     maybe_placeholders = false
   ) {
+    if (ambiguous) {
+      throw new ConfigurationError("Ambiguous not supported")
+    }
+
     this.tree_class = tree_class;
     this.propagate_positions = propagate_positions;
-    this.ambiguous = ambiguous;
     this.maybe_placeholders = maybe_placeholders;
     this.rule_builders = [...this._init_builders(rules)];
   }
@@ -2665,18 +2458,9 @@ class ParseTreeBuilder {
           maybe_create_child_filter(
             rule.expansion,
             keep_all_tokens,
-            this.ambiguous,
             this.maybe_placeholders ? options.empty_indices : []
           ),
           propagate_positions,
-          this.ambiguous &&
-            maybe_create_ambiguous_expander(
-              this.tree_class,
-              rule.expansion,
-              keep_all_tokens
-            ),
-          this.ambiguous &&
-            partial(AmbiguousIntermediateExpander, this.tree_class),
         ]),
       ];
       yield [rule, wrapper_chain];
@@ -2720,19 +2504,6 @@ class ParseTreeBuilder {
 //
 
 class LALR_Parser extends Serialize {
-  constructor({ parser_conf, debug = false } = {}) {
-    super();
-    let analysis = new LALR_Analyzer({
-      unknown_param_0: parser_conf,
-      debug: debug,
-    });
-    analysis.compute_lalr();
-    let callbacks = parser_conf.callbacks;
-    this._parse_table = analysis.parse_table;
-    this.parser_conf = parser_conf;
-    this.parser = new _Parser(analysis.parse_table, callbacks, debug);
-  }
-
   static deserialize(data, memo, callbacks, debug = false) {
     const cls = this;
     let inst = new_object(cls);
@@ -3097,7 +2868,7 @@ class InteractiveParser {
       if (isupper(t)) {
         // is terminal?
         new_cursor = copy(this);
-        exc = null;
+        let exc = null;
         try {
           new_cursor.feed_token(new Token(t, ""));
         } catch (e) {
@@ -3185,28 +2956,6 @@ class ParseTable {
     this.states = states;
     this.start_states = start_states;
     this.end_states = end_states;
-  }
-
-  serialize(memo) {
-    let tokens = new Enumerator();
-    let rules = new Enumerator();
-    let states = Object.fromEntries(
-      dict_items(this.states).map(([state, actions]) => [
-        state,
-        Object.fromEntries(
-          dict_items(actions).map(([token, [action, arg]]) => [
-            dict_get(tokens, token),
-            action === Reduce ? [1, arg.serialize(memo)] : [0, arg],
-          ])
-        ),
-      ])
-    );
-    return {
-      tokens: tokens.reversed(),
-      states: states,
-      start_states: this.start_states,
-      end_states: this.end_states,
-    };
   }
 
   static deserialize(data, memo) {
@@ -3342,25 +3091,16 @@ class ParsingFrontend extends Serialize {
       return;
     }
 
-    if (
-      {
-        standard: create_traditional_lexer,
-        contextual: create_contextual_lexer,
-      } &&
-      lexer_type in
-        {
-          standard: create_traditional_lexer,
-          contextual: create_contextual_lexer,
-        }
-    ) {
-      create_lexer = {
-        standard: create_traditional_lexer,
-        contextual: create_contextual_lexer,
-      }[lexer_type];
+    create_lexer = {
+      standard: create_traditional_lexer,
+      contextual: create_contextual_lexer,
+    }[lexer_type];
+    if (create_lexer) {
       this.lexer = create_lexer(lexer_conf, this.parser, lexer_conf.postlex);
     } else {
       this.lexer = _wrap_lexer(lexer_type)(lexer_conf);
     }
+
     if (lexer_conf.postlex) {
       this.lexer = new PostLexConnector(this.lexer, lexer_conf.postlex);
     }
@@ -3768,14 +3508,8 @@ class Lark extends Serialize {
   }
 
   _load({ f, ...kwargs } = {}) {
-    let d;
-    if (is_dict(f)) {
-      d = f;
-    } else {
-      d = pickle.load(f);
-    }
-    let memo_json = d["memo"];
-    let data = d["data"];
+    let memo_json = f["memo"];
+    let data = f["data"];
     let memo = SerializeMemoizer.deserialize(
       memo_json,
       { Rule: Rule, TerminalDef: TerminalDef },
@@ -4008,6 +3742,7 @@ class Indenter extends PostLex {
     return [this.NL_type];
   }
 }
+if (typeof module !== "undefined")
 module.exports = {
   LarkError,
   ConfigurationError,
