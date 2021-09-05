@@ -713,12 +713,6 @@ class SerializeMemoizer extends Serialize {
 // Tree
 //
 
-class Meta {
-  constructor() {
-    this.empty = true;
-  }
-}
-
 /**
   The main tree class.
 
@@ -742,7 +736,7 @@ class Tree {
 
   get meta() {
     if (this._meta === null) {
-      this._meta = new Meta();
+      this._meta = {empty: true}
     }
 
     return this._meta;
@@ -3754,7 +3748,6 @@ module.exports = {
   UnexpectedCharacters,
   UnexpectedToken,
   VisitError,
-  Meta,
   Tree,
   Discard,
   Transformer,
