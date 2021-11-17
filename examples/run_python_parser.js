@@ -2,31 +2,19 @@
 //   Example Python Parser for Javascript
 // ----------------------------------------
 //
-// First, we must generate a Python parser using:
+// First, we must generate a Python 3 parser using:
 //
-//      lark-js python3.lark -s file_input -o python_parser.js
+//      lark-js python.lark -s file_input -o python_parser.js
 //
 //  (The grammar file can be found in the Lark repo:
-//   https://github.com/lark-parser/lark/blob/master/examples/advanced/python3.lark)
+//   https://github.com/lark-parser/lark/blob/master/lark/grammars/python.lark)
 //
 // Then we can run it with
 //
 //      node run_python_parser.js
 //
 
-var {get_parser, Indenter} = require('./python_parser.js')
-
-class PythonIndenter extends Indenter {
-    constructor() {
-        super()
-        this.NL_type = '_NEWLINE'
-        this.OPEN_PAREN_types = ['LPAR', 'LSQB', 'LBRACE']
-        this.CLOSE_PAREN_types = ['RPAR', 'RSQB', 'RBRACE']
-        this.INDENT_type = '_INDENT'
-        this.DEDENT_type = '_DEDENT'
-        this.tab_len = 8
-    }
-}
+var {get_parser, PythonIndenter} = require('./python_parser.js')
 
 const parser = get_parser({postlex: new PythonIndenter()})
 
@@ -50,5 +38,13 @@ function test_python_lib(base_dir) {
 
 if (require && require.main === module) {
     test_python_lib('/Python38/lib/')   /* <-- Edit this */
+
+    let text = `
+(a, b,
+c) = d
+`
+
+    // let tree = parser.parse(text)
+    // console.log( (new PythonIndenter().always_accept ))
 }
 
