@@ -880,22 +880,6 @@ class Tree {
     return this.find_pred((t) => t.data === data);
   }
 
-  /**
-    Expand (inline) children with any of the given data values. Returns True if anything changed
-  */
-  expand_kids_by_data(...data_values) {
-    let child;
-    let changed = false;
-    for (const i of range(this.children.length - 1, -1, -1)) {
-      child = this.children[i];
-      if (child instanceof Tree && data_values.includes(child.data)) {
-        this.children.slice(i, i + 1) = child.children;
-        changed = true;
-      }
-    }
-
-    return changed;
-  }
 
   /**
     Return all values in the tree that evaluate pred(value) as true.
@@ -2440,71 +2424,6 @@ function maybe_create_child_filter(
   }
 }
 
-/**
-  Deal with the case where we're expanding children ('_rule') into a parent but the children
-       are ambiguous. i.e. (parent->_ambig->_expand_this_rule). In this case, make the parent itself
-       ambiguous with as many copies as their are ambiguous children, and then copy the ambiguous children
-       into the right parents in the right places, essentially shifting the ambiguity up the tree.
-*/
-
-class _AmbiguousExpander {
-  constructor(to_expand, tree_class, node_builder) {
-    this.node_builder = node_builder;
-    this.tree_class = tree_class;
-    this.to_expand = to_expand;
-  }
-
-  __call__(children) {
-    function _is_ambig_tree(t) {
-      return "data" in t && t.data === "_ambig";
-    }
-
-    // -- When we're repeatedly expanding ambiguities we can end up with nested ambiguities.
-    //    All children of an _ambig node should be a derivation of that ambig node, hence
-    //    it is safe to assume that if we see an _ambig node nested within an ambig node
-    //    it is safe to simply expand it into the parent _ambig node as an alternative derivation.
-    let ambiguous = [];
-    for (const [i, child] of enumerate(children)) {
-      if (_is_ambig_tree(child)) {
-        if (i in this.to_expand) {
-          ambiguous.push(i);
-        }
-
-        child.expand_kids_by_data("_ambig");
-      }
-    }
-
-    if (!ambiguous) {
-      return this.node_builder(children);
-    }
-
-    let expand = enumerate(children).map(([i, child]) =>
-      ambiguous.includes(i) ? iter(child.children) : repeat(child)
-    );
-    return this.tree_class(
-      "_ambig",
-      product(zip(...expand)).map((f) => this.node_builder([...f[0]]))
-    );
-  }
-}
-
-const AmbiguousExpander = callable_class(_AmbiguousExpander);
-function maybe_create_ambiguous_expander(
-  tree_class,
-  expansion,
-  keep_all_tokens
-) {
-  let to_expand = enumerate(expansion)
-    .filter(
-      ([i, sym]) =>
-        keep_all_tokens ||
-        (!(sym.is_term && sym.filter_out) && _should_expand(sym))
-    )
-    .map(([i, sym]) => i);
-  if (to_expand.length) {
-    return partial(AmbiguousExpander, to_expand, tree_class);
-  }
-}
 
 /**
   
@@ -2548,67 +2467,6 @@ function maybe_create_ambiguous_expander(
     
 */
 
-class _AmbiguousIntermediateExpander {
-  constructor(tree_class, node_builder) {
-    this.node_builder = node_builder;
-    this.tree_class = tree_class;
-  }
-
-  __call__(children) {
-    let iambig_node, new_tree, processed_nodes, result;
-    function _is_iambig_tree(child) {
-      return "data" in child && child.data === "_iambig";
-    }
-
-    /**
-    
-            Recursively flatten the derivations of the parent of an '_iambig'
-            node. Returns a list of '_inter' nodes guaranteed not
-            to contain any nested '_iambig' nodes, or None if children does
-            not contain an '_iambig' node.
-            
-  */
-    function _collapse_iambig(children) {
-      let collapsed, iambig_node, new_tree, result;
-      // Due to the structure of the SPPF,
-      // an '_iambig' node can only appear as the first child
-      if (children && _is_iambig_tree(children[0])) {
-        iambig_node = children[0];
-        result = [];
-        for (const grandchild of iambig_node.children) {
-          collapsed = _collapse_iambig(grandchild.children);
-          if (collapsed) {
-            for (const child of collapsed) {
-              child.children += children.slice(1);
-            }
-
-            result.push(...collapsed);
-          } else {
-            new_tree = this.tree_class(
-              "_inter",
-              grandchild.children + children.slice(1)
-            );
-            result.push(new_tree);
-          }
-        }
-
-        return result;
-      }
-    }
-
-    let collapsed = _collapse_iambig(children);
-    if (collapsed) {
-      processed_nodes = collapsed.map((c) => this.node_builder(c.children));
-      return this.tree_class("_ambig", processed_nodes);
-    }
-
-    return this.node_builder(children);
-  }
-}
-
-const AmbiguousIntermediateExpander = callable_class(
-  _AmbiguousIntermediateExpander
-);
 function inplace_transformer(func) {
   function f(children) {
     // function name in a Transformer is a rule name.
@@ -2669,14 +2527,6 @@ class ParseTreeBuilder {
             this.maybe_placeholders ? options.empty_indices : []
           ),
           propagate_positions,
-          this.ambiguous &&
-            maybe_create_ambiguous_expander(
-              this.tree_class,
-              rule.expansion,
-              keep_all_tokens
-            ),
-          this.ambiguous &&
-            partial(AmbiguousIntermediateExpander, this.tree_class),
         ]),
       ];
       yield [rule, wrapper_chain];
