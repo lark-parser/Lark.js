@@ -163,7 +163,7 @@ class TestTrees extends TestCase {
       // some code here
 
       b(args) {
-        throw new Discard();
+        return Discard;
       }
     }
 

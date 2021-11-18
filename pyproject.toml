@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "Lark-js"
-version = "0.0.7"
+version = "0.1.0"
 description = "An extension to Lark that generates a Javascript standalone"
 authors = ["Erez Shin <erezshin@gmail.com>"]
 license = "MIT"
@@ -20,7 +20,7 @@ classifiers = [
 packages = [{ include = "larkjs" }]
 
 [tool.poetry.dependencies]
-lark = "^0, >=0.11.1"
+lark = "^1.0.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
