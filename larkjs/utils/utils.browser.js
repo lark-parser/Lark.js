@@ -9,5 +9,5 @@ export function inspect(item) {
  * @param {*} obj
  */
 export function isMap(obj) {
-  return self[Symbol.toStringTag] === "Map";
+  return obj != null && obj[Symbol.toStringTag] === "Map";
 }
