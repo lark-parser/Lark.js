@@ -1,5 +1,5 @@
 const _ = require("lodash");
-const lark = require("../larkjs/lark.js");
+const lark = require("../dist/index.js");
 const assert = require('assert');
 
 const {

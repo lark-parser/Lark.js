@@ -3,8 +3,32 @@
   "description": "live port of the Lark standalone parser to Javascript",
   "version": "0.1.0",
   "scripts": {
-    "test": "mocha"
+    "prepack": "npm run build",
+    "build": "rm -rf dist && npm run build:web && npm run build:node",
+    "build:web": "microbundle --compress=false --target=web -f=esm --output=dist/index.browser.js",
+    "build:node": "microbundle --compress=false --target=node -f=modern,cjs",
+    "test": "npm run build && mocha"
   },
+  "engines": {
+    "node": ">= 12"
+  },
+  "source": "larkjs/lark.js",
+  "module": "dist/index.modern.js",
+  "main": "dist/index.js",
+  "browser": {
+    ".": "./dist/index.browser.js",
+    "./larkjs/utils/utils.js": "./larkjs/utils/utils.browser.js"
+  },
+  "exports": {
+    "import": "./dist/index.modern.js",
+    "require": "./dist/index.js",
+    "browser": "./dist/index.browser.js"
+  },
+  "files": [
+    "dist/*",
+    "LICENSE",
+    "README.md"
+  ],
   "devDependencies": {
     "lodash": "^4.17.21",
     "microbundle": "^0.14.2",
