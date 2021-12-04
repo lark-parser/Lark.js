@@ -5,10 +5,10 @@
   "scripts": {
     "test": "mocha"
   },
-  "dependencies": {},
   "devDependencies": {
     "lodash": "^4.17.21",
-    "mocha": "^9.0.3"
+    "mocha": "^9.0.3",
+    "parcel": "^2.0.1"
   },
   "volta": {
     "node": "16.13.1"
