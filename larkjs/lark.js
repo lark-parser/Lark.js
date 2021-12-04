@@ -21,7 +21,7 @@ import { inspect, isMap } from "./utils/utils.js";
     - lex
 
 */
-function get_parser(options = {}) {
+export function get_parser(options = {}) {
   if (
     options.transformer &&
     options.transformer.constructor.name === "object"
@@ -34,7 +34,7 @@ function get_parser(options = {}) {
 
 const NO_VALUE = {};
 class _Decoratable {}
-const Discard = {};
+export const Discard = {};
 
 //
 //   Implementation of Scanner + module emulation for Python's stdlib re
@@ -353,11 +353,11 @@ function* segment_by_key(a, key) {
 // Exceptions
 //
 
-class LarkError extends Error {
+export class LarkError extends Error {
   // pass
 }
 
-class ConfigurationError extends LarkError {
+export class ConfigurationError extends LarkError {
   // pass
 }
 
@@ -367,15 +367,15 @@ function assert_config(value, options, msg = "Got %r, expected one of %s") {
   }
 }
 
-class GrammarError extends LarkError {
+export class GrammarError extends LarkError {
   // pass
 }
 
-class ParseError extends LarkError {
+export class ParseError extends LarkError {
   // pass
 }
 
-class LexError extends LarkError {
+export class LexError extends LarkError {
   // pass
 }
 
@@ -392,7 +392,7 @@ class LexError extends LarkError {
 
 */
 
-class UnexpectedInput extends LarkError {
+export class UnexpectedInput extends LarkError {
   /**
     Returns a pretty string pinpointing the error in the text,
         with span amount of context characters around it.
@@ -504,7 +504,7 @@ class UnexpectedInput extends LarkError {
 
 */
 
-class UnexpectedEOF extends UnexpectedInput {
+export class UnexpectedEOF extends UnexpectedInput {
   constructor(expected, state = null, terminals_by_name = null) {
     super();
     this.expected = expected;
@@ -524,7 +524,7 @@ class UnexpectedEOF extends UnexpectedInput {
 
 */
 
-class UnexpectedCharacters extends UnexpectedInput {
+export class UnexpectedCharacters extends UnexpectedInput {
   constructor({
     seq,
     lex_pos,
@@ -569,7 +569,7 @@ class UnexpectedCharacters extends UnexpectedInput {
 
 */
 
-class UnexpectedToken extends UnexpectedInput {
+export class UnexpectedToken extends UnexpectedInput {
   constructor({
     token,
     expected,
@@ -619,7 +619,7 @@ class UnexpectedToken extends UnexpectedInput {
 
 */
 
-class VisitError extends LarkError {
+export class VisitError extends LarkError {
   constructor(rule, obj, orig_exc) {
     let message = format(
       'Error trying to process rule "%s":\n\n%s',
@@ -746,7 +746,7 @@ class SerializeMemoizer extends Serialize {
 // Tree
 //
 
-class Meta {
+export class Meta {
   constructor() {
     this.empty = true;
   }
@@ -766,7 +766,7 @@ class Meta {
 
 */
 
-class Tree {
+export class Tree {
   constructor(data, children, meta = null) {
     this.data = data;
     this.children = children;
@@ -966,7 +966,7 @@ class Tree {
 
 */
 
-class Transformer extends _Decoratable {
+export class Transformer extends _Decoratable {
   static get __visit_tokens__() {
     return true;
   }
@@ -1088,7 +1088,7 @@ class Transformer extends _Decoratable {
 
 */
 
-class Transformer_InPlace extends Transformer {
+export class Transformer_InPlace extends Transformer {
   _transform_tree(tree) {
     // Cancel recursion
     return this._call_userfunc(tree);
@@ -1112,7 +1112,7 @@ class Transformer_InPlace extends Transformer {
 
 */
 
-class Transformer_NonRecursive extends Transformer {
+export class Transformer_NonRecursive extends Transformer {
   transform(tree) {
     let args, res, size;
     // Tree to postfix
@@ -1161,7 +1161,7 @@ class Transformer_NonRecursive extends Transformer {
   Same as Transformer, recursive, but changes the tree in-place instead of returning new instances
 */
 
-class Transformer_InPlaceRecursive extends Transformer {
+export class Transformer_InPlaceRecursive extends Transformer {
   _transform_tree(tree) {
     tree.children = [...this._transform_children(tree.children)];
     return this._call_userfunc(tree);
@@ -1170,7 +1170,7 @@ class Transformer_InPlaceRecursive extends Transformer {
 
 // Visitors
 
-class VisitorBase {
+export class VisitorBase {
   _call_userfunc(tree) {
     const callback = this[tree.data]
     if (callback) {
@@ -1202,7 +1202,7 @@ class VisitorBase {
 
 */
 
-class Visitor extends VisitorBase {
+export class Visitor extends VisitorBase {
   /**
     Visits the tree, starting with the leaves and finally the root (bottom-up)
   */
@@ -1235,7 +1235,7 @@ class Visitor extends VisitorBase {
 
 */
 
-class Visitor_Recursive extends VisitorBase {
+export class Visitor_Recursive extends VisitorBase {
   /**
     Visits the tree, starting with the leaves and finally the root (bottom-up)
   */
@@ -1278,7 +1278,7 @@ class Visitor_Recursive extends VisitorBase {
 
 */
 
-class Interpreter extends _Decoratable {
+export class Interpreter extends _Decoratable {
   visit(tree) {
     if (tree.data in this) {
       return this[tree.data](tree);
@@ -1303,7 +1303,7 @@ class Interpreter extends _Decoratable {
 //
 
 var TOKEN_DEFAULT_PRIORITY = 0;
-class Symbol extends Serialize {
+export class Symbol extends Serialize {
   is_term = NotImplemented;
   constructor(name) {
     super();
@@ -1329,7 +1329,7 @@ class Symbol extends Serialize {
   }
 }
 
-class Terminal extends Symbol {
+export class Terminal extends Symbol {
   static get __serialize_fields__() {
     return ["name", "filter_out"];
   }
@@ -1352,7 +1352,7 @@ class Terminal extends Symbol {
   }
 }
 
-class NonTerminal extends Symbol {
+export class NonTerminal extends Symbol {
   static get __serialize_fields__() {
     return ["name"];
   }
@@ -1362,7 +1362,7 @@ class NonTerminal extends Symbol {
 
 }
 
-class RuleOptions extends Serialize {
+export class RuleOptions extends Serialize {
   static get __serialize_fields__() {
     return [
       "keep_all_tokens",
@@ -1406,7 +1406,7 @@ class RuleOptions extends Serialize {
 
 */
 
-class Rule extends Serialize {
+export class Rule extends Serialize {
   static get __serialize_fields__() {
     return ["origin", "expansion", "order", "alias", "options"];
   }
@@ -1452,7 +1452,7 @@ class Rule extends Serialize {
 
 // Lexer Implementation
 
-class Pattern extends Serialize {
+export class Pattern extends Serialize {
   constructor(value, flags = [], raw = null) {
     super();
     this.value = value;
@@ -1489,7 +1489,7 @@ class Pattern extends Serialize {
   }
 }
 
-class PatternStr extends Pattern {
+export class PatternStr extends Pattern {
   static get __serialize_fields__() {
     return ["value", "flags"];
   }
@@ -1507,7 +1507,7 @@ class PatternStr extends Pattern {
   }
 }
 
-class PatternRE extends Pattern {
+export class PatternRE extends Pattern {
   static get __serialize_fields__() {
     return ["value", "flags", "_width"];
   }
@@ -1533,7 +1533,7 @@ class PatternRE extends Pattern {
   }
 }
 
-class TerminalDef extends Serialize {
+export class TerminalDef extends Serialize {
   static get __serialize_fields__() {
     return ["name", "pattern", "priority"];
   }
@@ -1582,7 +1582,7 @@ class TerminalDef extends Serialize {
 
 */
 
-class Token {
+export class Token {
   constructor(
     type_,
     value,
@@ -1642,7 +1642,7 @@ class Token {
   }
 }
 
-class LineCounter {
+export class LineCounter {
   constructor(newline_char) {
     this.newline_char = newline_char;
     this.char_pos = 0;
@@ -1802,7 +1802,7 @@ class LexerState {
 
 */
 
-class Lexer extends ABC {
+export class Lexer extends ABC {
   lex(lexer_state, parser_state) {
     return NotImplemented;
   }
@@ -2014,7 +2014,7 @@ class BasicLexer extends Lexer {
   }
 }
 
-class ContextualLexer extends Lexer {
+export class ContextualLexer extends Lexer {
   constructor({ conf, states, always_accept = [] } = {}) {
     super();
     let accepts, key, lexer, lexer_conf;
@@ -2092,7 +2092,7 @@ class ContextualLexer extends Lexer {
   A thread that ties a lexer instance and a lexer state, to be used by the parser
 */
 
-class LexerThread {
+export class LexerThread {
   constructor(lexer, text) {
     this.lexer = lexer;
     this.state = lexer.make_lexer_state(text);
@@ -2107,7 +2107,7 @@ class LexerThread {
 // Common
 //
 
-class LexerConf extends Serialize {
+export class LexerConf extends Serialize {
   static get __serialize_fields__() {
     return ["terminals", "ignore", "g_regex_flags", "use_bytes", "lexer_type"];
   }
@@ -2146,7 +2146,7 @@ class LexerConf extends Serialize {
   }
 }
 
-class ParserConf extends Serialize {
+export class ParserConf extends Serialize {
   static get __serialize_fields__() {
     return ["rules", "start", "parser_type"];
   }
@@ -2840,7 +2840,7 @@ class _Parser {
 
 */
 
-class InteractiveParser {
+export class InteractiveParser {
   constructor(parser, parser_state, lexer_state) {
     this.parser = parser;
     this.parser_state = parser_state;
@@ -2977,7 +2977,7 @@ class InteractiveParser {
 
 */
 
-class ImmutableInteractiveParser extends InteractiveParser {
+export class ImmutableInteractiveParser extends InteractiveParser {
   static get result() {
     return null;
   }
@@ -3339,7 +3339,7 @@ var CYK_FrontEnd = NotImplemented;
 // Lark
 //
 
-class PostLex extends ABC {
+export class PostLex extends ABC {
   process(stream) {
     return stream;
   }
@@ -3535,7 +3535,7 @@ var _VALID_AMBIGUITY_OPTIONS = ["auto", "resolve", "explicit", "forest"];
 
 */
 
-class Lark extends Serialize {
+export class Lark extends Serialize {
   static get __serialize_fields__() {
     return ["parser", "rules", "options"];
   }
@@ -3765,11 +3765,11 @@ class Lark extends Serialize {
 // Indenter
 //
 
-class DedentError extends LarkError {
+export class DedentError extends LarkError {
   // pass
 }
 
-class Indenter extends PostLex {
+export class Indenter extends PostLex {
   constructor() {
     super();
     this.paren_level = 0;
@@ -3864,7 +3864,7 @@ class Indenter extends PostLex {
   }
 }
 
-class PythonIndenter extends Indenter {
+export class PythonIndenter extends Indenter {
   static get NL_type() {
     return "_NEWLINE";
   }
@@ -3902,48 +3902,3 @@ class PythonIndenter extends Indenter {
     return this.constructor.tab_len;
   }
 }
-
-export {
-  LarkError,
-  ConfigurationError,
-  GrammarError,
-  ParseError,
-  LexError,
-  UnexpectedInput,
-  UnexpectedEOF,
-  UnexpectedCharacters,
-  UnexpectedToken,
-  VisitError,
-  Meta,
-  Tree,
-  Discard,
-  Transformer,
-  Transformer_InPlace,
-  Transformer_NonRecursive,
-  Transformer_InPlaceRecursive,
-  VisitorBase,
-  Visitor,
-  Visitor_Recursive,
-  Interpreter,
-  Symbol,
-  Terminal,
-  NonTerminal,
-  RuleOptions,
-  Rule,
-  Pattern,
-  PatternStr,
-  PatternRE,
-  TerminalDef,
-  Token,
-  Lexer,
-  LexerConf,
-  ParserConf,
-  InteractiveParser,
-  ImmutableInteractiveParser,
-  PostLex,
-  Lark,
-  DedentError,
-  Indenter,
-  PythonIndenter,
-  get_parser,
-};
