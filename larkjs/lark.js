@@ -2,12 +2,12 @@
 //  Lark.js stand-alone parser
 //===============================
 
-"use strict";
+import { inspect, isMap } from "./utils/utils.js";
 
 /**
 	This is the main entrypoint into the generated Lark parser.
 
-  @param {object} options An object with the following optional properties: 
+  @param {object} options An object with the following optional properties:
 
 	  - transformer: an object of {rule: callback}, or an instance of Transformer
 	  - propagate_positions (bool): should all tree nodes calculate line/column info?
@@ -109,8 +109,6 @@ class Scanner {
 //  Start of library code
 // --------------------------
 
-const util = typeof require !== "undefined" && require("util");
-
 class ABC {}
 
 const NotImplemented = {};
@@ -139,7 +137,7 @@ function dict_get(d, key, otherwise = null) {
 }
 
 function dict_update(self, other) {
-  if (self.constructor.name === "Map") {
+  if (isMap(self)) {
     for (const [k, v] of dict_items(other)) {
       self.set(k, v);
     }
@@ -174,9 +172,7 @@ function format(s) {
     const t = arguments[1];
     const item = args[counter++];
     if (t === "r") {
-      return util
-        ? util.inspect(item, false, null, true)
-        : JSON.stringify(item, null, 0);
+      return inspect(item);
     } else {
       return item;
     }
@@ -241,7 +237,7 @@ function is_dict(x) {
   return x && x.constructor.name === "Object";
 }
 function is_array(x) {
-  return x && x.constructor.name === "Array";
+  return Array.isArray(x);
 }
 function callable(x) {
   return typeof x === "function";
@@ -393,7 +389,7 @@ class LexError extends LarkError {
     - ``UnexpectedEOF``: The parser expected a token, but the input ended
 
     After catching one of these exceptions, you may call the following helper methods to create a nicer error message.
-    
+
 */
 
 class UnexpectedInput extends LarkError {
@@ -404,7 +400,7 @@ class UnexpectedInput extends LarkError {
         Note:
             The parser doesn't hold a copy of the text it has to parse,
             so you have to provide it again
-        
+
   */
   get_context(text, span = 40) {
     let after, before;
@@ -444,7 +440,7 @@ class UnexpectedInput extends LarkError {
             parse_fn: parse function (usually ``lark_instance.parse``)
             examples: dictionary of ``{'example_string': value}``.
             use_accepts: Recommended to keep this as ``use_accepts=True``.
-        
+
   */
   match_examples(
     parse_fn,
@@ -505,7 +501,7 @@ class UnexpectedInput extends LarkError {
 
 /**
   An exception that is raised by the parser, when the input ends while it still expects a token.
-    
+
 */
 
 class UnexpectedEOF extends UnexpectedInput {
@@ -523,9 +519,9 @@ class UnexpectedEOF extends UnexpectedInput {
 }
 
 /**
-  An exception that is raised by the lexer, when it cannot match the next 
+  An exception that is raised by the lexer, when it cannot match the next
     string of characters to any of its terminals.
-    
+
 */
 
 class UnexpectedCharacters extends UnexpectedInput {
@@ -570,7 +566,7 @@ class UnexpectedCharacters extends UnexpectedInput {
                             and can be used for debugging and error handling.
 
     Note: These parameters are available as attributes of the instance.
-    
+
 */
 
 class UnexpectedToken extends UnexpectedInput {
@@ -620,7 +616,7 @@ class UnexpectedToken extends UnexpectedInput {
         orig_exc: the exception that cause it to fail
 
     Note: These parameters are available as attributes
-    
+
 */
 
 class VisitError extends LarkError {
@@ -688,7 +684,7 @@ function _deserialize(data, namespace, memo) {
         __serialize_fields__ (List[str]): Fields (aka attributes) to serialize.
         __serialize_namespace__ (list): List of classes that deserialization is allowed to instantiate.
                                         Should include all field types that aren't builtin types.
-    
+
 */
 
 class Serialize {
@@ -767,7 +763,7 @@ class Meta {
         children: List of matched sub-rules and terminals
         meta: Line & Column numbers (if ``propagate_positions`` is enabled).
             meta attributes: line, column, start_pos, end_line, end_column, end_pos
-    
+
 */
 
 class Tree {
@@ -820,7 +816,7 @@ class Tree {
     Returns an indented string representation of the tree.
 
         Great for debugging.
-        
+
   */
   pretty(indent_str = "  ") {
     return this._pretty(0, indent_str).join("");
@@ -847,7 +843,7 @@ class Tree {
     Depth-first iteration.
 
         Iterates over all the subtrees, never returning to the same node twice (Lark's parse-tree is actually a DAG).
-        
+
   */
   iter_subtrees() {
     let queue = [this];
@@ -888,7 +884,7 @@ class Tree {
 
         Example:
             >>> all_tokens = tree.scan_values(lambda v: isinstance(v, Token))
-        
+
   */
   *scan_values(pred) {
     for (const c of this.children) {
@@ -908,7 +904,7 @@ class Tree {
     Breadth-first iteration.
 
         Iterates over all the subtrees, return nodes in order like pretty() does.
-        
+
   */
   *iter_subtrees_topdown() {
     let node;
@@ -967,7 +963,7 @@ class Tree {
                                        (For processing ignored tokens, use the ``lexer_callbacks`` options)
 
     NOTE: A transformer without methods essentially performs a non-memoized partial deepcopy.
-    
+
 */
 
 class Transformer extends _Decoratable {
@@ -1068,7 +1064,7 @@ class Transformer extends _Decoratable {
     Default function that is called if there is no attribute matching ``data``
 
         Can be overridden. Defaults to creating a new copy of the tree node (i.e. ``return Tree(data, children, meta)``)
-        
+
   */
   __default__(data, children, meta) {
     return new Tree(data, children, meta);
@@ -1078,7 +1074,7 @@ class Transformer extends _Decoratable {
     Default function that is called if there is no attribute matching ``token.type``
 
         Can be overridden. Defaults to returning the token as-is.
-        
+
   */
   __default_token__(token) {
     return token;
@@ -1089,7 +1085,7 @@ class Transformer extends _Decoratable {
   Same as Transformer, but non-recursive, and changes the tree in-place instead of returning new instances
 
     Useful for huge trees. Conservative in memory.
-    
+
 */
 
 class Transformer_InPlace extends Transformer {
@@ -1113,7 +1109,7 @@ class Transformer_InPlace extends Transformer {
     Like Transformer, it doesn't change the original tree.
 
     Useful for huge trees.
-    
+
 */
 
 class Transformer_NonRecursive extends Transformer {
@@ -1188,7 +1184,7 @@ class VisitorBase {
     Default function that is called if there is no attribute matching ``tree.data``
 
         Can be overridden. Defaults to doing nothing.
-        
+
   */
   __default__(tree) {
     return tree;
@@ -1203,7 +1199,7 @@ class VisitorBase {
   Tree visitor, non-recursive (can handle huge trees).
 
     Visiting a node calls its methods (provided by the user via inheritance) according to ``tree.data``
-    
+
 */
 
 class Visitor extends VisitorBase {
@@ -1236,7 +1232,7 @@ class Visitor extends VisitorBase {
     Visiting a node calls its methods (provided by the user via inheritance) according to ``tree.data``
 
     Slightly faster than the non-recursive version.
-    
+
 */
 
 class Visitor_Recursive extends VisitorBase {
@@ -1279,7 +1275,7 @@ class Visitor_Recursive extends VisitorBase {
     Unlike ``Transformer`` and ``Visitor``, the Interpreter doesn't automatically visit its sub-branches.
     The user has to explicitly call ``visit``, ``visit_children``, or use the ``@visit_children_decor``.
     This allows the user to implement branching and loops.
-    
+
 */
 
 class Interpreter extends _Decoratable {
@@ -1403,11 +1399,11 @@ class RuleOptions extends Serialize {
 }
 
 /**
-  
+
         origin : a symbol
         expansion : a list of symbols
         order : index of this expansion amongst all rules of the same name
-    
+
 */
 
 class Rule extends Serialize {
@@ -1583,7 +1579,7 @@ class TerminalDef extends Serialize {
             if the token is a single character with a column value of 4,
             end_column will be 5.
         end_pos: the index where the token ends (basically ``start_pos + len(token)``)
-    
+
 */
 
 class Token {
@@ -1670,7 +1666,7 @@ class LineCounter {
     Consume a token and calculate the new line & column.
 
         As an optional optimization, set test_newline=False if token doesn't contain a newline.
-        
+
   */
   feed(token, test_newline = true) {
     let newlines;
@@ -1766,7 +1762,7 @@ function _create_unless(terminals, g_regex_flags, re_, use_bytes) {
         - anything but ([^...])
         - any-char (.) when the flag (?s) exists
         - spaces (\s)
-    
+
   */
 function _regexp_has_newline(r) {
   return (
@@ -1803,7 +1799,7 @@ class LexerState {
 
     Method Signatures:
         lex(self, lexer_state, parser_state) -> Iterator[Token]
-    
+
 */
 
 class Lexer extends ABC {
@@ -2426,7 +2422,7 @@ function maybe_create_child_filter(
 
 
 /**
-  
+
     Propagate ambiguous intermediate nodes and their derivations up to the
     current rule.
 
@@ -2464,7 +2460,7 @@ function maybe_create_child_filter(
       ...
 
     propagating up any nested '_iambig' nodes along the way.
-    
+
 */
 
 function inplace_transformer(func) {
@@ -2841,7 +2837,7 @@ class _Parser {
   InteractiveParser gives you advanced control over parsing and error handling when parsing with LALR.
 
     For a simpler interface, see the ``on_error`` argument to ``Lark.parse()``.
-    
+
 */
 
 class InteractiveParser {
@@ -2855,7 +2851,7 @@ class InteractiveParser {
     Feed the parser with a token, and advance it to the next state, as if it received it from the lexer.
 
         Note that ``token`` has to be an instance of ``Token``.
-        
+
   */
   feed_token(token) {
     return this.parser_state.feed_token(token, token.type === "$END");
@@ -2863,7 +2859,7 @@ class InteractiveParser {
 
   /**
     Try to feed the rest of the lexer state into the interactive parser.
-        
+
         Note that this modifies the instance in place and does not feed an '$END' Token
   */
   exhaust_lexer() {
@@ -2929,7 +2925,7 @@ class InteractiveParser {
         Only returns token types that are accepted by the current state.
 
         Updated by ``feed_token()``.
-        
+
   */
   choices() {
     return this.parser_state.parse_conf.parse_table.states[
@@ -2978,7 +2974,7 @@ class InteractiveParser {
 /**
   Same as ``InteractiveParser``, but operations create a new instance instead
     of changing it in-place.
-    
+
 */
 
 class ImmutableInteractiveParser extends InteractiveParser {
@@ -3353,7 +3349,7 @@ class PostLex extends ABC {
 /**
   Specifies the options for Lark
 
-    
+
 */
 
 class LarkOptions extends Serialize {
@@ -3536,7 +3532,7 @@ var _VALID_AMBIGUITY_OPTIONS = ["auto", "resolve", "explicit", "forest"];
     Example:
         >>> Lark(r'''start: "foo" ''')
         Lark(...)
-    
+
 */
 
 class Lark extends Serialize {
@@ -3579,13 +3575,13 @@ class Lark extends Serialize {
     Saves the instance into the given file object
 
         Useful for caching and multiprocessing.
-        
+
   */
   /**
     Loads an instance from the given file object
 
         Useful for caching and multiprocessing.
-        
+
   */
   _deserialize_lexer_conf(data, memo, options) {
     let lexer_conf = LexerConf.deserialize(data["lexer_conf"], memo);
@@ -3668,7 +3664,7 @@ class Lark extends Serialize {
             >>> Lark.open("grammar_file.lark", rel_to=__file__, parser="lalr")
             Lark(...)
 
-        
+
   */
   /**
     Create an instance of Lark with the grammar loaded from within the package `package`.
@@ -3679,7 +3675,7 @@ class Lark extends Serialize {
         Example:
 
             Lark.open_from_package(__name__, "example.lark", ("grammars",), parser=...)
-        
+
   */
   repr() {
     return format(
@@ -3696,7 +3692,7 @@ class Lark extends Serialize {
         When dont_ignore=True, the lexer will return all tokens, even those marked for %ignore.
 
         :raises UnexpectedCharacters: In case the lexer cannot find a suitable match.
-        
+
   */
   lex(text, dont_ignore = false) {
     let lexer;
@@ -3732,7 +3728,7 @@ class Lark extends Serialize {
             A new InteractiveParser instance.
 
         See Also: ``Lark.parse()``
-        
+
   */
   parse_interactive(text = null, start = null) {
     return this.parser.parse_interactive({
@@ -3758,7 +3754,7 @@ class Lark extends Serialize {
                 ``UnexpectedCharacters``, ``UnexpectedToken``, or ``UnexpectedEOF``.
                 For convenience, these sub-exceptions also inherit from ``ParserError`` and ``LexerError``.
 
-        
+
   */
   parse(text, start = null, on_error = null) {
     return this.parser.parse(text, start, on_error);
@@ -3906,7 +3902,8 @@ class PythonIndenter extends Indenter {
     return this.constructor.tab_len;
   }
 }
-module.exports = {
+
+export {
   LarkError,
   ConfigurationError,
   GrammarError,
