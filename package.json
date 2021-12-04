@@ -9,5 +9,8 @@
   "devDependencies": {
     "lodash": "^4.17.21",
     "mocha": "^9.0.3"
+  },
+  "volta": {
+    "node": "16.13.1"
   }
 }
