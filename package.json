@@ -1,6 +1,8 @@
 {
   "name": "Lark.js",
+  "author": "Erez Shin",
   "description": "live port of the Lark standalone parser to Javascript",
+  "repository": "github:lark-parser/Lark.js",
   "version": "0.1.0",
   "scripts": {
     "prepack": "npm run build",
