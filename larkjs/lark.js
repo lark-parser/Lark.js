@@ -201,6 +201,10 @@ function intersection(setA, setB) {
   return _intersection;
 }
 
+function set_subtract(a, b) {
+  return [...a].filter(e => !b.has(e))
+}
+
 function dict(d) {
   return { ...d };
 }
@@ -1956,7 +1960,7 @@ class BasicLexer extends Lexer {
     while (line_ctr.char_pos < lex_state.text.length) {
       res = this.match(lex_state.text, line_ctr.char_pos);
       if (!res) {
-        allowed = this.scanner.allowed_types - this.ignore_types;
+        allowed = set_subtract(this.scanner.allowed_types, this.ignore_types);
         if (!allowed) {
           allowed = new Set(["<END-OF-FILE>"]);
         }
@@ -3460,6 +3464,7 @@ class LarkOptions extends Serialize {
     use_bytes: false,
     import_paths: [],
     source_path: null,
+    _plugins: null,
   };
   constructor(options_dict) {
     super();
