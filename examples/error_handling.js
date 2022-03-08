@@ -41,7 +41,7 @@ function ignore_errors(e) {
     }
 
     // Unhandled error. Will stop parse and raise exception
-    return true;
+    return false;
 }
 
 function test_error_handling() {
