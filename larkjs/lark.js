@@ -306,7 +306,7 @@ function list_repeat(list, count) {
 }
 
 function isupper(a) {
-  return /^[A-Z]*$/.test(a);
+  return /^[A-Z_$]*$/.test(a);
 }
 
 function rsplit(s, delimiter, limit) {
