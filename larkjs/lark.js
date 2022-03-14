@@ -698,8 +698,6 @@ function _deserialize(data, namespace, memo) {
 class Serialize {
   static deserialize(data, memo) {
     const cls = this;
-    let namespace = (cls && cls["__serialize_namespace__"]) || [];
-    namespace = Object.fromEntries(namespace.map((c) => [c.name, c]));
     let fields = cls && cls["__serialize_fields__"];
     if ("@" in data) {
       return memo[data["@"]];
@@ -708,7 +706,7 @@ class Serialize {
     let inst = new_object(cls);
     for (const f of fields) {
       if (data && f in data) {
-        inst[f] = _deserialize(data[f], namespace, memo);
+        inst[f] = _deserialize(data[f], NAMESPACE, memo);
       } else {
         throw new KeyError("Cannot find key for class", cls, e);
       }
@@ -3911,6 +3909,16 @@ class PythonIndenter extends Indenter {
     return this.constructor.tab_len;
   }
 }
+
+const NAMESPACE = {
+    Terminal: Terminal,
+    NonTerminal: NonTerminal,
+    RuleOptions: RuleOptions,
+    PatternStr: PatternStr,
+    PatternRE: PatternRE,
+    TerminalDef: TerminalDef
+}
+
 module.exports = {
   LarkError,
   ConfigurationError,
