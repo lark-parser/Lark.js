@@ -63,7 +63,7 @@ def test_json_parser():
     
     res = js_parser.parse(text, transformer)
     expected = r"""{"empty_object":{},"empty_array":[],"booleans":{"YES":true,"NO":false},"numbers":[0,1,-2,3.3,440000,6.6e-7],"strings":["This",["And","That","And a \\\"b"]],"nothing":null}"""
-    assert res.strip() == expected
+    assert res.strip() == expected, res
 
 def test():
     test_json_parser()

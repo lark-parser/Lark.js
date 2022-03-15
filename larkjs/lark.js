@@ -1499,7 +1499,7 @@ class PatternStr extends Pattern {
   static get __serialize_fields__() {
     return ["value", "flags"];
   }
-  type = "str";
+  static get type() { return "str"; }
   to_regexp() {
     return this._get_flags(re.escape(this.value));
   }
@@ -1517,7 +1517,7 @@ class PatternRE extends Pattern {
   static get __serialize_fields__() {
     return ["value", "flags", "_width"];
   }
-  type = "re";
+  static get type() { return "re"; }
   to_regexp() {
     return this._get_flags(this.value);
   }
@@ -1723,12 +1723,12 @@ class _CallChain {
 const CallChain = callable_class(_CallChain);
 function _create_unless(terminals, g_regex_flags, re_, use_bytes) {
   let s, unless;
-  let tokens_by_type = classify(terminals, (t) => t.pattern.constructor.name);
+  let tokens_by_type = classify(terminals, (t) => t.pattern.constructor.type);
   let embedded_strs = new Set();
   let callback = {};
-  for (const retok of tokens_by_type.get('PatternRE') || []) {
+  for (const retok of tokens_by_type.get('re') || []) {
     unless = [];
-    for (const strtok of tokens_by_type.get('PatternStr') || []) {
+    for (const strtok of tokens_by_type.get('str') || []) {
       if (strtok.priority !== retok.priority) {
         continue;
       }
