@@ -798,20 +798,20 @@ class Tree {
   _pretty(level, indent_str) {
     if (this.children.length === 1 && !(this.children[0] instanceof Tree)) {
       return [
-        indent_str * level,
+        list_repeat(indent_str, level).join(''),
         this._pretty_label(),
         "\t",
-        format("%s", this.children[0]),
+        format("%s", this.children[0].value),
         "\n",
       ];
     }
 
-    let l = [indent_str * level, this._pretty_label(), "\n"];
+    let l = [list_repeat(indent_str, level).join(''), this._pretty_label(), "\n"];
     for (const n of this.children) {
       if (n instanceof Tree) {
         l.push(...n._pretty(level + 1, indent_str));
       } else {
-        l.push(...[indent_str * (level + 1), format("%s", n), "\n"]);
+        l.push(...[list_repeat(indent_str, level+1).join(''), format("%s", n.value), "\n"]);
       }
     }
 
