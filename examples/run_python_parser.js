@@ -37,7 +37,7 @@ function test_python_lib(base_dir) {
 
 
 if (require && require.main === module) {
-    test_python_lib('/Python38/lib/')   /* <-- Edit this */
+    test_python_lib('/Python310/lib/')   /* <-- Edit this */
 
     let text = `
 (a, b,
