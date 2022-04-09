@@ -922,8 +922,8 @@ class Tree {
       }
 
       yield node;
-      for (const n of [...node.children].reverse()) {
-        stack.push(n);
+      for (const child of [...node.children].reverse()) {
+        stack.push(child);
       }
     }
   }
@@ -943,19 +943,24 @@ class Tree {
 //
 
 /**
-  Transformers visit each node of the tree, and run the appropriate method on it according to the node's data.
+  Transformers work bottom-up (or depth-first), starting with visiting the leaves and working 
+    their way up until ending at the root of the tree.
 
-    Methods are provided by the user via inheritance, and called according to ``tree.data``.
-    The returned value from each method replaces the node in the tree structure.
+    For each node visited, the transformer will call the appropriate method (callbacks), according to the
+    node's ``data``, and use the returned value to replace the node, thereby creating a new tree structure.
 
-    Transformers work bottom-up (or depth-first), starting with the leaves and ending at the root of the tree.
     Transformers can be used to implement map & reduce patterns. Because nodes are reduced from leaf to root,
     at any point the callbacks may assume the children have already been transformed (if applicable).
+
+    If the transformer cannot find a method with the right name, it will instead call ``__default__``, which by
+    default creates a copy of the node.
+    
+    To discard a node, return Discard (``lark.visitors.Discard``).
 
     ``Transformer`` can do anything ``Visitor`` can do, but because it reconstructs the tree,
     it is slightly less efficient.
 
-    To discard a node, return Discard (``lark.visitors.Discard``).
+    A transformer without methods essentially performs a non-memoized partial deepcopy.
 
     All these classes implement the transformer interface:
 
@@ -968,7 +973,6 @@ class Tree {
                                        Setting this to ``False`` is slightly faster. Defaults to ``True``.
                                        (For processing ignored tokens, use the ``lexer_callbacks`` options)
 
-    NOTE: A transformer without methods essentially performs a non-memoized partial deepcopy.
     
 */
 
@@ -1780,10 +1784,16 @@ function _regexp_has_newline(r) {
   );
 }
 
+/**
+  Represents the current state of the lexer as it scans the text
+    (Lexer objects are only instanciated per grammar, not per text)
+    
+*/
+
 class LexerState {
-  constructor(text, line_ctr, last_token = null) {
+  constructor(text, line_ctr = null, last_token = null) {
     this.text = text;
-    this.line_ctr = line_ctr;
+    this.line_ctr = line_ctr || new LineCounter("\n");
     this.last_token = last_token;
   }
 
@@ -1801,6 +1811,26 @@ class LexerState {
 }
 
 /**
+  A thread that ties a lexer instance and a lexer state, to be used by the parser
+    
+*/
+
+class LexerThread {
+  constructor(lexer, lexer_state) {
+    this.lexer = lexer;
+    this.state = lexer_state;
+  }
+
+  static from_text(lexer, text) {
+    return new this(lexer, new LexerState(text));
+  }
+
+  lex(parser_state) {
+    return this.lexer.lex(this.state, parser_state);
+  }
+}
+
+/**
   Lexer interface
 
     Method Signatures:
@@ -1811,11 +1841,6 @@ class LexerState {
 class Lexer extends ABC {
   lex(lexer_state, parser_state) {
     return NotImplemented;
-  }
-
-  make_lexer_state(text) {
-    let line_ctr = new LineCounter("\n");
-    return new LexerState(text, line_ctr);
   }
 }
 
@@ -2052,10 +2077,6 @@ class ContextualLexer extends Lexer {
     this.root_lexer = new BasicLexer(trad_conf);
   }
 
-  make_lexer_state(text) {
-    return this.root_lexer.make_lexer_state(text);
-  }
-
   *lex(lexer_state, parser_state) {
     let last_token, lexer, token;
     try {
@@ -2091,21 +2112,6 @@ class ContextualLexer extends Lexer {
         throw e;
       }
     }
-  }
-}
-
-/**
-  A thread that ties a lexer instance and a lexer state, to be used by the parser
-*/
-
-class LexerThread {
-  constructor(lexer, text) {
-    this.lexer = lexer;
-    this.state = lexer.make_lexer_state(text);
-  }
-
-  lex(parser_state) {
-    return this.lexer.lex(this.state, parser_state);
   }
 }
 
@@ -2617,7 +2623,7 @@ class LALR_Parser extends Serialize {
 
         while (true) {
           if (e instanceof UnexpectedCharacters) {
-            s = e.interactive_parser.lexer_state.state;
+            s = e.interactive_parser.lexer_thread.state;
             p = s.line_ctr.char_pos;
           }
 
@@ -2847,10 +2853,11 @@ class _Parser {
 */
 
 class InteractiveParser {
-  constructor(parser, parser_state, lexer_state) {
+  constructor(parser, parser_state, lexer_thread) {
     this.parser = parser;
     this.parser_state = parser_state;
-    this.lexer_state = lexer_state;
+    this.lexer_thread = lexer_thread;
+    this.result = null;
   }
 
   /**
@@ -2864,14 +2871,29 @@ class InteractiveParser {
   }
 
   /**
+    Step through the different stages of the parse, by reading tokens from the lexer
+        and feeding them to the parser, one per iteration.
+
+        Returns an iterator of the tokens it encounters.
+
+        When the parse is over, the resulting tree can be found in ``InteractiveParser.result``. 
+        
+  */
+  *iter_parse() {
+    for (const token of this.lexer_thread.lex(this.parser_state)) {
+      yield token;
+      this.result = this.feed_token(token);
+    }
+  }
+
+  /**
     Try to feed the rest of the lexer state into the interactive parser.
         
         Note that this modifies the instance in place and does not feed an '$END' Token
+        
   */
   exhaust_lexer() {
-    for (const token of this.lexer_state.lex(this.parser_state)) {
-      this.parser_state.feed_token(token);
-    }
+    return [...this.iter_parse()];
   }
 
   /**
@@ -2896,7 +2918,7 @@ class InteractiveParser {
 
     return (
       this.parser_state === other.parser_state &&
-      this.lexer_state === other.lexer_state
+      this.lexer_thread === other.lexer_thread
     );
   }
 
@@ -2908,7 +2930,7 @@ class InteractiveParser {
     return new ImmutableInteractiveParser(
       p.parser,
       p.parser_state,
-      p.lexer_state
+      p.lexer_thread
     );
   }
 
@@ -3012,7 +3034,7 @@ class ImmutableInteractiveParser extends InteractiveParser {
   */
   as_mutable() {
     let p = copy(this);
-    return new InteractiveParser(p.parser, p.parser_state, p.lexer_state);
+    return new InteractiveParser(p.parser, p.parser_state, p.lexer_thread);
   }
 }
 
@@ -3041,7 +3063,6 @@ class ParseTable {
 
   serialize(memo) {
     let tokens = new Enumerator();
-    let rules = new Enumerator();
     let states = Object.fromEntries(
       dict_items(this.states).map(([state, actions]) => [
         state,
@@ -3165,6 +3186,26 @@ class MakeParsingFrontend {
 
 // ... Continued later in the module
 
+function _deserialize_parsing_frontend(
+  data,
+  memo,
+  lexer_conf,
+  callbacks,
+  options
+) {
+  let parser_conf = ParserConf.deserialize(data["parser_conf"], memo);
+  let parser = LALR_Parser.deserialize(data["parser"], memo, callbacks, options.debug);
+  parser_conf.callbacks = callbacks;
+  return new ParsingFrontend({
+    lexer_conf: lexer_conf,
+    parser_conf: parser_conf,
+    options: options,
+    parser: parser,
+  });
+}
+
+var _parser_creators = {}
+
 class ParsingFrontend extends Serialize {
   static get __serialize_fields__() {
     return ["lexer_conf", "parser_conf", "parser"];
@@ -3180,11 +3221,7 @@ class ParsingFrontend extends Serialize {
       // From cache
       this.parser = parser;
     } else {
-      create_parser = {
-        lalr: create_lalr_parser,
-        earley: create_earley_parser,
-        cyk: CYK_FrontEnd,
-      }[parser_conf.parser_type];
+      create_parser = dict_get(_parser_creators, parser_conf.parser_type);
       this.parser = create_parser(lexer_conf, parser_conf, options);
     }
     // Set-up lexer
@@ -3195,16 +3232,18 @@ class ParsingFrontend extends Serialize {
       return;
     }
 
-    if (
-      { basic: create_basic_lexer, contextual: create_contextual_lexer } &&
-      lexer_type in
-        { basic: create_basic_lexer, contextual: create_contextual_lexer }
-    ) {
-      create_lexer = {
+    const lexers = {
         basic: create_basic_lexer,
-        contextual: create_contextual_lexer,
-      }[lexer_type];
-      this.lexer = create_lexer(lexer_conf, this.parser, lexer_conf.postlex);
+        contextual: create_contextual_lexer
+    }
+    if (lexer_type in lexers) {
+      create_lexer = lexers[lexer_type];
+      this.lexer = create_lexer(
+        lexer_conf,
+        this.parser,
+        lexer_conf.postlex,
+        options
+      );
     } else {
       this.lexer = _wrap_lexer(lexer_type)(lexer_conf);
     }
@@ -3238,10 +3277,14 @@ class ParsingFrontend extends Serialize {
     return start;
   }
 
+  _make_lexer_thread(text) {
+    return this.skip_lexer ? text : LexerThread.from_text(this.lexer, text);
+  }
+
   parse(text, start = null, on_error = null) {
     let chosen_start = this._verify_start(start);
-    let stream = this.skip_lexer ? text : new LexerThread(this.lexer, text);
     let kw = on_error === null ? {} : { on_error: on_error };
+    let stream = this._make_lexer_thread(text);
     return this.parser.parse({
       lexer: stream,
       start: chosen_start,
@@ -3257,12 +3300,12 @@ class ParsingFrontend extends Serialize {
       );
     }
 
-    let stream = this.skip_lexer ? text : new LexerThread(this.lexer, text);
+    let stream = this._make_lexer_thread(text);
     return this.parser.parse_interactive(stream, chosen_start);
   }
 }
 
-function get_frontend(parser, lexer) {
+function _validate_frontend_args(parser, lexer) {
   let expected;
   assert_config(parser, ["lalr", "earley", "cyk"]);
   if (!(typeof lexer === "object")) {
@@ -3281,8 +3324,6 @@ function get_frontend(parser, lexer) {
       )
     );
   }
-
-  return new MakeParsingFrontend(parser, lexer);
 }
 
 function _get_lexer_callbacks(transformer, terminals) {
@@ -3304,21 +3345,17 @@ class PostLexConnector {
     this.postlexer = postlexer;
   }
 
-  make_lexer_state(text) {
-    return this.lexer.make_lexer_state(text);
-  }
-
   lex(lexer_state, parser_state) {
     let i = this.lexer.lex(lexer_state, parser_state);
     return this.postlexer.process(i);
   }
 }
 
-function create_basic_lexer(lexer_conf, parser, postlex) {
+function create_basic_lexer(lexer_conf, parser, postlex, options) {
   return new BasicLexer(lexer_conf);
 }
 
-function create_contextual_lexer(lexer_conf, parser, postlex) {
+function create_contextual_lexer(lexer_conf, parser, postlex, options) {
   let states = Object.fromEntries(
     dict_items(parser._parse_table.states).map(([idx, t]) => [
       idx,
@@ -3338,8 +3375,7 @@ function create_lalr_parser(lexer_conf, parser_conf, options = null) {
   return new LALR_Parser({ parser_conf: parser_conf, debug: debug });
 }
 
-var create_earley_parser = NotImplemented;
-var CYK_FrontEnd = NotImplemented;
+_parser_creators["lalr"] = create_lalr_parser;
 
 //
 // Lark
@@ -3513,7 +3549,7 @@ class LarkOptions extends Serialize {
 }
 
 // Options that can be passed to the Lark parser, even when it was loaded from cache/standalone.
-// These option are only used outside of `load_grammar`.
+// These options are only used outside of `load_grammar`.
 var _LOAD_ALLOWED_OPTIONS = new Set([
   "postlex",
   "transformer",
@@ -3631,7 +3667,7 @@ class Lark extends Serialize {
     this.options = LarkOptions.deserialize(options, memo);
     this.rules = data["rules"].map((r) => Rule.deserialize(r, memo));
     this.source_path = "<deserialized>";
-    let parser_class = get_frontend(this.options.parser, this.options.lexer);
+    _validate_frontend_args(this.options.parser, this.options.lexer);
     this.lexer_conf = this._deserialize_lexer_conf(
       data["parser"],
       memo,
@@ -3642,7 +3678,7 @@ class Lark extends Serialize {
     this._terminals_dict = Object.fromEntries(
       this.terminals.map((t) => [t.name, t])
     );
-    this.parser = parser_class.deserialize(
+    this.parser = _deserialize_parsing_frontend(
       data["parser"],
       memo,
       this.lexer_conf,
@@ -3708,7 +3744,7 @@ class Lark extends Serialize {
     } else {
       lexer = this.lexer;
     }
-    let lexer_thread = new LexerThread(lexer, text);
+    let lexer_thread = LexerThread.from_text(lexer, text);
     let stream = lexer_thread.lex(null);
     if (this.options.postlex) {
       return this.options.postlex.process(stream);
