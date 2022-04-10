@@ -243,7 +243,7 @@ function intersection(setA, setB) {
 }
 
 function set_subtract(a, b) {
-  return [...a].filter(e => !b.has(e))
+  return [...a].filter((e) => !b.has(e));
 }
 
 function dict(d) {
@@ -442,6 +442,8 @@ class LexError extends LarkError {
 */
 
 class UnexpectedInput extends LarkError {
+  pos_in_stream = null;
+  _terminals_by_name = null;
   /**
     Returns a pretty string pinpointing the error in the text,
         with span amount of context characters around it.
@@ -1936,7 +1938,10 @@ class BasicLexer extends Lexer {
         throw new LexError(
           format(
             "Ignore terminals are not defined: %s",
-            new Set(conf.ignore) - new Set(terminals.map((t) => t.name))
+            set_subtract(
+              new Set(conf.ignore),
+              new Set(terminals.map((t) => t.name))
+            )
           )
         );
       }
@@ -3047,12 +3052,7 @@ class InteractiveParser {
 */
 
 class ImmutableInteractiveParser extends InteractiveParser {
-  static get result() {
-    return null;
-  }
-  get result() {
-    return this.constructor.result;
-  }
+  result = null;
   feed_token(token) {
     let c = copy(this);
     c.result = InteractiveParser.feed_token(c, token);
@@ -3427,6 +3427,7 @@ class PostLex extends ABC {
     return stream;
   }
 
+  always_accept = [];
 }
 
 /**
@@ -3436,38 +3437,37 @@ class PostLex extends ABC {
 */
 
 class LarkOptions extends Serialize {
-  static get OPTIONS_DOC() {
-    return `
+  OPTIONS_DOC = `
     **===  General Options  ===**
 
     start
             The start symbol. Either a string, or a list of strings for multiple possible starts (Default: "start")
     debug
-            Display debug information and extra warnings. Use only when debugging (Default: ````False````)
+            Display debug information and extra warnings. Use only when debugging (Default: \`\`False\`\`)
             When used with Earley, it generates a forest graph as "sppf.png", if 'dot' is installed.
     transformer
             Applies the transformer to every parse tree (equivalent to applying it after the parse, but faster)
     propagate_positions
             Propagates (line, column, end_line, end_column) attributes into all tree branches.
-            Accepts ````False````, ````True````, or a callable, which will filter which nodes to ignore when propagating.
+            Accepts \`\`False\`\`, \`\`True\`\`, or a callable, which will filter which nodes to ignore when propagating.
     maybe_placeholders
-            When ````True````, the ````[]```` operator returns ````None```` when not matched.
-            When ````False````,  ````[]```` behaves like the ````?```` operator, and returns no value at all.
-            (default= ````True````)
+            When \`\`True\`\`, the \`\`[]\`\` operator returns \`\`None\`\` when not matched.
+            When \`\`False\`\`,  \`\`[]\`\` behaves like the \`\`?\`\` operator, and returns no value at all.
+            (default= \`\`True\`\`)
     cache
             Cache the results of the Lark grammar analysis, for x2 to x3 faster loading. LALR only for now.
 
-            - When ````False````, does nothing (default)
-            - When ````True````, caches to a temporary file in the local directory
+            - When \`\`False\`\`, does nothing (default)
+            - When \`\`True\`\`, caches to a temporary file in the local directory
             - When given a string, caches to the path pointed by the string
     regex
-            When True, uses the ````regex```` module instead of the stdlib ````re````.
+            When True, uses the \`\`regex\`\` module instead of the stdlib \`\`re\`\`.
     g_regex_flags
             Flags that are applied to all terminals (both regex and strings)
     keep_all_tokens
-            Prevent the tree builder from automagically removing "punctuation" tokens (Default: ````False````)
+            Prevent the tree builder from automagically removing "punctuation" tokens (Default: \`\`False\`\`)
     tree_class
-            Lark will produce trees comprised of instances of this class instead of the default ````lark.Tree````.
+            Lark will produce trees comprised of instances of this class instead of the default \`\`lark.Tree\`\`.
 
     **=== Algorithm Options ===**
 
@@ -3493,13 +3493,13 @@ class LarkOptions extends Serialize {
     **=== Misc. / Domain Specific Options ===**
 
     postlex
-            Lexer post-processing (Default: ````None````) Only works with the basic and contextual lexers.
+            Lexer post-processing (Default: \`\`None\`\`) Only works with the basic and contextual lexers.
     priority
-            How priorities should be evaluated - "auto", ````None````, "normal", "invert" (Default: "auto")
+            How priorities should be evaluated - "auto", \`\`None\`\`, "normal", "invert" (Default: "auto")
     lexer_callbacks
             Dictionary of callbacks for the lexer. May alter tokens during lexing. Use with caution.
     use_bytes
-            Accept an input of type ````bytes```` instead of ````str````.
+            Accept an input of type \`\`bytes\`\` instead of \`\`str\`\`.
     edit_terminals
             A callback for editing the terminals before parse.
     import_paths
@@ -3508,10 +3508,6 @@ class LarkOptions extends Serialize {
             Override the source of from where the grammar was loaded. Useful for relative imports and unconventional grammar loading
     **=== End of Options ===**
     `;
-  }
-  get OPTIONS_DOC() {
-    return this.constructor.OPTIONS_DOC;
-  }
   // Adding a new option needs to be done in multiple places:
   // - In the dictionary below. This is the primary truth of which options `Lark.__init__` accepts
   // - In the docstring above. It is used both for the docstring of `LarkOptions` and `Lark`, and in readthedocs
@@ -4052,7 +4048,7 @@ module.exports = {
 <br class="clear">
 
 <footer>
-    Generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.6.7</a> on Sat Apr 09 2022 19:55:17 GMT+0000 (Coordinated Universal Time) using the Minami theme.
+    Generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.6.7</a> on Sun Apr 10 2022 13:27:19 GMT+0000 (Coordinated Universal Time) using the Minami theme.
 </footer>
 
 <script>prettyPrint();</script>
