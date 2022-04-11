@@ -2651,7 +2651,7 @@ class LALR_Parser extends Serialize {
                 e instanceof UnexpectedToken &&
                 e.token.type === e2.token.type &&
                 e2.token.type === "$END" &&
-                e.interactive_parser === e2.interactive_parser
+                e.interactive_parser.eq(e2.interactive_parser)
               ) {
                 // Prevent infinite loop
                 throw e2;
