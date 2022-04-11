@@ -2800,7 +2800,7 @@ class _Parser {
     // Main LALR-parser loop
     try {
       token = null;
-      for (const token of state.lexer.lex(state)) {
+      for (token of state.lexer.lex(state)) {
         state.feed_token(token);
       }
 
