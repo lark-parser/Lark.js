@@ -1,7 +1,7 @@
 {
   "name": "Lark.js",
   "description": "live port of the Lark standalone parser to Javascript",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "scripts": {
     "test": "mocha"
   },
