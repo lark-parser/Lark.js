@@ -413,25 +413,13 @@ class UnexpectedInput extends LarkError {
 
   */
   get_context(text, span = 40) {
-    let after, before;
-    let pos = this.pos_in_stream;
-    let start = max(pos - span, 0);
-    let end = pos + span;
-    if (!(text instanceof bytes)) {
-      before = last_item(rsplit(text.slice(start, pos), "\n", 1));
-      after = text.slice(pos, end).split("\n", 1)[0];
-      return before + after + "\n" + " " * before.expandtabs().length + "^\n";
-    } else {
-      before = last_item(rsplit(text.slice(start, pos), "\n", 1));
-      after = text.slice(pos, end).split("\n", 1)[0];
-      return (
-        before +
-        after +
-        "\n" +
-        " " * before.expandtabs().length +
-        "^\n"
-      ).decode("ascii", "backslashreplace");
-    }
+    const pos = this.pos_in_stream;
+    const start = Math.max(pos - span, 0);
+    const end = pos + span;
+    const before = last_item(rsplit(text.slice(start, pos), "\n", 1));
+    const after = text.slice(pos, end).split("\n", 1)[0];
+
+    return before + after + "\n" + " ".repeat(before.length) + "^\n";
   }
 
   /**
