@@ -2,8 +2,6 @@ const _ = require("lodash");
 const lark = require("../larkjs/lark.js");
 const assert = require('assert');
 
-console.log('lark', lark);
-
 const {
   InteractiveParser,
 } = lark;
