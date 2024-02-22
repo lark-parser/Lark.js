@@ -4,7 +4,7 @@
 
 Lark is a popular parsing toolkit for Python.
 
-This project is a live port of the Lark standalone parser to Javascript.
+This project is a port of the Lark standalone parser to Javascript.
 
 **Lark.js** takes a `.lark` grammar, and from it generates a standalone Javascript parser.
 
@@ -51,6 +51,8 @@ Install lark-js on Python:
 ```sh
     pip install lark-js --upgrade
 ```
+
+Note: lark-js requires that the version for lark-python is <=1.1.5
 
 ### Generate a Javascript LALR(1) parser
 
