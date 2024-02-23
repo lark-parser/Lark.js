@@ -306,7 +306,7 @@ function list_repeat(list, count) {
 }
 
 function isupper(a) {
-  return /^[A-Z_$]*$/.test(a);
+  return /^[^a-z]*[A-Z][^a-z]*$/.test(a);
 }
 
 function rsplit(s, delimiter, limit) {
@@ -3981,4 +3981,5 @@ module.exports = {
   Indenter,
   PythonIndenter,
   get_parser,
+  isupper,
 };
