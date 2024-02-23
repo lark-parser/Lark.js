@@ -19,7 +19,7 @@ classifiers = [
 packages = [{ include = "larkjs" }]
 
 [tool.poetry.dependencies]
-lark = "^1.0.0"
+lark = ">=1.0.0,<=1.1.6"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
