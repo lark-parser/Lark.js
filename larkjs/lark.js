@@ -3757,10 +3757,7 @@ class Lark extends Serialize {
 
   */
   parse_interactive(text = null, start = null) {
-    return this.parser.parse_interactive({
-      unknown_param_0: text,
-      start: start,
-    });
+    return this.parser.parse_interactive(text, start);
   }
 
   /**
